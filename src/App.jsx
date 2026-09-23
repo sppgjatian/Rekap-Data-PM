@@ -85,6 +85,24 @@ export default function App() {
             📥 Unduh Template
           </button>
         </div>
+        {/* BANNER PENGUMUMAN PENTING */}
+        <div className="bg-[#FFF3E0] border-2 border-[#F57C00] rounded-xl p-4 shadow-sm animate-fade-in">
+          <div className="flex items-start gap-3">
+            <span className="text-2xl">⚠️</span>
+            <div>
+              <p className="font-bold text-[#E65100] text-sm mb-1">PENGUMUMAN PENTING UNTUK SELURUH SEKOLAH!</p>
+              <p className="text-sm text-gray-700 leading-relaxed">
+                Sebelumnya pengumpulan data dilakukan melalui <b>Google Forms tanpa validasi</b>, sehingga banyak ditemukan file yang tidak sesuai: template yang sudah tidak digunakan masih dipakai, bahkan <b>template guru digunakan untuk data siswa</b>. Mulai sekarang, portal ini dilengkapi <b>validasi otomatis</b>. File yang tidak sesuai template resmi akan <b>ditolak otomatis oleh sistem</b>.
+              </p>
+              <ul className="text-sm text-gray-700 mt-2 list-disc list-inside space-y-1">
+                <li>Formulir Siswa → wajib pakai <b>Template Siswa</b>.</li>
+                <li>Formulir Guru & Pendukung → wajib pakai <b>Template Guru & Pendukung</b>.</li>
+                <li>Jangan menukar template antar formulir — sistem akan mendeteksi dan menolaknya.</li>
+                <li>Unduh template terbaru hanya dari portal ini, jangan dari file lama/kiriman chat.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
 
         {/* 2 KARTU MENU UTAMA */}
         <div className="grid md:grid-cols-2 gap-6">
