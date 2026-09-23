@@ -95,25 +95,35 @@ body {
   margin-right: 0.5rem;
 }
 
-@keyframes neon-glow {
+@keyframes neon-glow-readable {
   0%, 100% {
     text-shadow: 
-      0 0 5px #FFF,
-      0 0 10px #FFF,
-      0 0 20px #F59E0B,
-      0 0 40px #F59E0B;
+      0 0 2px #FFF,
+      0 0 4px #FDE047,
+      0 0 8px #F59E0B,
+      0 0 16px #DC2626;
   }
   50% {
     text-shadow: 
-      0 0 2px #FFF,
-      0 0 5px #FFF,
-      0 0 10px #F59E0B,
-      0 0 20px #F59E0B;
+      0 0 1px #FFF,
+      0 0 2px #FDE047,
+      0 0 4px #F59E0B,
+      0 0 8px #DC2626;
   }
 }
 
-.neon-text {
-  animation: neon-glow 1.5s ease-in-out infinite;
-  color: #FFF;
+@keyframes pulse-bg {
+  0%, 100% { background-color: #FEF3C7; }
+  50% { background-color: #FDE68A; }
+}
+
+.neon-readable {
+  animation: neon-glow-readable 2s ease-in-out infinite;
+  color: #991B1B;
   font-weight: 900;
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  border: 2px solid #F59E0B;
+  animation: neon-glow-readable 2s ease-in-out infinite, pulse-bg 3s ease-in-out infinite;
 }
