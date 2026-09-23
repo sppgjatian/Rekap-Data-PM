@@ -110,7 +110,10 @@ export default function App() {
                 <li>Formulir Siswa → wajib pakai <b>Template Siswa</b>.</li>
                 <li>Formulir Guru & Pendukung → wajib pakai <b>Template Guru & Pendukung</b>.</li>
                 <li>Jangan menukar template antar formulir — sistem akan mendeteksi dan menolaknya.</li>
-                    <li><span className="neon-readable">⚠️ Unduh template terbaru HANYA dari portal ini, JANGAN dari file lama/kiriman chat!</span></li>
+                       <span className="blink-warning">
+     <span className="blink-icon">⚠️</span>
+     Unduh template terbaru HANYA dari portal ini, JANGAN dari file lama/kiriman chat!
+   </span>
               </ul>
             </div>
           </div>
