@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 
-const ADMIN_PIN = '2024';
 
 export default function AdminPanel({ onClose }) {
   const [pin, setPin] = useState('');
@@ -28,14 +27,20 @@ export default function AdminPanel({ onClose }) {
     setLoading(false);
   };
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    if (pin === ADMIN_PIN) {
-      setAuthenticated(true);
-      setError('');
-      loadData(tab);
-    } else {
-      setError('❌ PIN salah!');
+    setError('');
+    try {
+      const { data, error } = await supabase.rpc('verify_admin_pin', { input_pin: pin });
+      if (error) throw error;
+      if (data === true) {
+        setAuthenticated(true);
+        loadData(tab);
+      } else {
+        setError('❌ PIN salah!');
+      }
+    } catch (err) {
+      setError('Gagal memverifikasi PIN: ' + err.message);
     }
   };
 
