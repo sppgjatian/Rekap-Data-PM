@@ -71,7 +71,7 @@ export default function TeacherForm({ onSuccess }) {
       const detailRows = v.data.map((r, i) => ({
         submission_id: meta.id, 
         row_index: i + 1, 
-        nama_sekolah: r['nama sekolah'],
+        nama_sekolah: namaSekolah,
         nama_lengkap: r.nama_lengkap, 
         tanggal_lahir: r.tanggal_lahir, 
         gender: r.gender,
