@@ -48,6 +48,11 @@ export default function TemplateModal({ onClose }) {
         <div className="p-6 md:p-8">
           <h2 className="text-2xl font-bold text-[#1B5E20] mb-1">📥 Unduh Template Resmi</h2>
           <p className="text-sm text-gray-500 mb-6">Pilih template yang ingin diunduh. Anda juga dapat melihat pratinjau file asli sebelum mengunduh.</p>
+          <div className="bg-[#FFF3E0] border-l-4 border-[#F57C00] p-3 rounded-r-lg mb-6">
+            <p className="text-xs text-[#E65100] font-medium">
+              ⚠️ Gunakan template sesuai kategorinya. Template guru untuk data siswa (atau sebaliknya) akan <b>ditolak otomatis</b> oleh sistem. Pada pengiriman sebelumnya via Google Forms tanpa validasi, banyak data tidak dapat diproses karena template tertukar.
+            </p>
+          </div>
 
           <div className="grid md:grid-cols-2 gap-4 mb-6">
             {/* Kartu Template Siswa */}
