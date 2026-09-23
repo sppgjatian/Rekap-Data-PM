@@ -75,8 +75,8 @@ export default function App() {
         {/* TOMBOL TUNGGAL UNDUH TEMPLATE */}
         <div className="bg-white rounded-xl p-4 shadow-sm border border-green-100 flex flex-wrap items-center justify-between gap-3 animate-fade-in">
           <div>
-            <p className="text-sm font-semibold text-[#1B5E20]">📥 Unduh Template Resmi</p>
-            <p className="text-xs text-gray-500">Unduh template Excel resmi & lihat pratinjau file asli sebelum mengisi formulir.</p>
+            <p className="text-sm font-semibold text-[#1B5E20]">📥 Unduh Template</p>
+            <p className="text-xs text-gray-500">Wajib Menggunakan Template dari kami</p>
           </div>
           <button
             onClick={() => setShowTemplate(true)}
