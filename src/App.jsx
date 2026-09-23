@@ -57,8 +57,8 @@ export default function App() {
               <span className="text-2xl">🌿</span>
             </div>
             <div>
-              <h1 className="text-lg md:text-xl font-bold text-white">Portal MBG</h1>
-              <p className="text-xs text-green-100">SPPG Jatian Pakusari · Badan Gizi Nasional</p>
+              <h1 className="text-lg md:text-xl font-bold text-white">Dashboard Monitoring Pengumpulan File</h1>
+              <p className="text-xs text-green-100">Pantau status validasi file yang telah diunggah</p>
             </div>
           </div>
           <button
