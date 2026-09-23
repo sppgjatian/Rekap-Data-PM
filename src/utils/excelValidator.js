@@ -18,17 +18,53 @@ const VALID_SUB_KATEGORI_GURU = [
   'Petugas Penyaji Makanan', 'Pendamping'
 ];
 
+const pad = (n) => String(n).padStart(2, '0');
+
+// Objek Date (dari Excel) -> "DD/MM/YYYY"
+const dateToDDMMYYYY = (d) =>
+  `${pad(d.getUTCDate())}/${pad(d.getUTCMonth() + 1)}/${d.getUTCFullYear()}`;
+
+// Angka serial Excel (mis. 43624) -> "DD/MM/YYYY"
+const serialToDDMMYYYY = (serial) => {
+  const ms = Math.round((serial - 25569) * 86400 * 1000);
+  return dateToDDMMYYYY(new Date(ms));
+};
+
 export function parseExcel(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
         const data = new Uint8Array(e.target.result);
-        const wb = XLSX.read(data, { type: 'array' });
+        // cellDates: true -> sel tanggal Excel dibaca sebagai objek Date, bukan angka serial
+        const wb = XLSX.read(data, { type: 'array', cellDates: true });
         const ws = wb.Sheets[wb.SheetNames[0]];
-        // header: 1 → baca sebagai array baris
         const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-        resolve(rows);
+
+        // Cari indeks kolom tanggal_lahir dari header (baris 1)
+        const header = rows[0] || [];
+        const dateCol = header.findIndex(
+          (h) => String(h).trim().toLowerCase() === 'tanggal_lahir'
+        );
+
+        // Normalisasi: objek Date & angka serial -> teks "DD/MM/YYYY"
+        const normalized = rows.map((row) =>
+          row.map((cell, cIdx) => {
+            if (cell instanceof Date && !isNaN(cell.getTime())) {
+              return dateToDDMMYYYY(cell);
+            }
+            if (
+              cIdx === dateCol &&
+              typeof cell === 'number' &&
+              cell >= 20000 && cell <= 80000
+            ) {
+              return serialToDDMMYYYY(cell);
+            }
+            return cell;
+          })
+        );
+
+        resolve(normalized);
       } catch (err) {
         reject('File Excel tidak dapat dibaca: ' + err.message);
       }
@@ -43,73 +79,52 @@ const norm = (s) => String(s ?? '').trim().toLowerCase();
 export function validateExcel(rows, kategori) {
   const errors = [];
 
-  // Cek file tidak kosong (minimal: header + baris panduan + 1 data)
   if (!rows || rows.length < 3) {
     return { ok: false, errors: ['File kosong atau tidak berisi data.'], data: [] };
   }
 
-  // ===== 1. VALIDASI HEADER (Baris 1) =====
   const headerRaw = rows[0].map(norm);
   const expected = kategori === 'Siswa' ? EXPECTED_HEADER_SISWA : EXPECTED_HEADER_GURU;
 
-  // Cek jumlah kolom
   if (headerRaw.length < expected.length) {
-    errors.push(
-      `Jumlah kolom header kurang. Diharapkan ${expected.length} kolom, ditemukan ${headerRaw.length}.`
-    );
+    errors.push(`Jumlah kolom header kurang. Diharapkan ${expected.length} kolom, ditemukan ${headerRaw.length}.`);
     return { ok: false, errors, data: [] };
   }
 
-  // Cek urutan & nama kolom satu per satu
   for (let i = 0; i < expected.length; i++) {
     if (headerRaw[i] !== expected[i]) {
-      errors.push(
-        `Header Excel tidak sesuai template resmi. Kolom ke-${i + 1} harus "${expected[i]}", ditemukan "${headerRaw[i] || '(kosong)'}".`
-      );
-      break; // cukup error pertama agar pesan jelas
+      errors.push(`Header Excel tidak sesuai template resmi. Kolom ke-${i + 1} harus "${expected[i]}", ditemukan "${headerRaw[i] || '(kosong)'}".`);
+      break;
     }
   }
 
   if (errors.length) return { ok: false, errors, data: [] };
 
-  // ===== 2. SKIP BARIS 2 (PANDUAN) =====
-  // Baris index 1 adalah instruksi kuning → kita lewati
-  const dataRows = rows.slice(2); // mulai dari index 2 (baris ke-3)
-
+  // Baris 2 = petunjuk -> dilewati, data mulai baris 3
+  const dataRows = rows.slice(2);
   const valid = [];
   const dateRe = /^(0[1-9]|[12]\d|3[01])\/(0[1-9]|1[0-2])\/\d{4}$/;
   const nikRe = /^\d{16}$/;
 
   dataRows.forEach((row, idx) => {
-    // Skip baris kosong total
     const nonEmpty = row.filter((c) => c !== '' && c !== null && c !== undefined).length;
     if (nonEmpty === 0) return;
 
-    // Mapping ke object berdasarkan header
     const obj = {};
     headerRaw.forEach((h, i) => { obj[h] = row[i]; });
-    obj._row = idx + 3; // nomor baris asli di Excel (1-indexed)
+    obj._row = idx + 3;
 
-    // ===== 3. VALIDASI FORMAT DATA =====
-
-    // Tanggal lahir: DD/MM/YYYY
     if (obj.tanggal_lahir && !dateRe.test(String(obj.tanggal_lahir).trim())) {
-      errors.push(`Baris ${obj._row}: Format tanggal_lahir salah. Harus DD/MM/YYYY (contoh: 01/01/2000). Ditemukan: "${obj.tanggal_lahir}"`);
+      errors.push(`Baris ${obj._row}: Format tanggal_lahir salah. Harus DD/MM/YYYY. Ditemukan: "${obj.tanggal_lahir}"`);
     }
-
-    // NIK: 16 digit angka
     if (obj.nik && !nikRe.test(String(obj.nik).trim())) {
-      errors.push(`Baris ${obj._row}: NIK harus 16 digit angka. Ditemukan: "${obj.nik}" (${String(obj.nik).length} digit)`);
+      errors.push(`Baris ${obj._row}: NIK harus 16 digit angka. Ditemukan: "${obj.nik}"`);
     }
-
-    // Gender: L / P
     if (obj.gender && !VALID_GENDER.includes(String(obj.gender).trim())) {
       errors.push(`Baris ${obj._row}: gender tidak valid. Harus "L" atau "P". Ditemukan: "${obj.gender}"`);
     }
-
-    // Sub kategori (hanya untuk guru)
     if (kategori === 'Guru' && obj.sub_kategori && !VALID_SUB_KATEGORI_GURU.includes(String(obj.sub_kategori).trim())) {
-      errors.push(`Baris ${obj._row}: sub_kategori "${obj.sub_kategori}" tidak dikenal. Pilih dari dropdown template.`);
+      errors.push(`Baris ${obj._row}: sub_kategori "${obj.sub_kategori}" tidak dikenal.`);
     }
 
     valid.push(obj);
