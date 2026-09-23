@@ -104,7 +104,7 @@ export default function App() {
             <div>
               <p className="font-bold text-[#E65100] text-sm mb-1">PENGUMUMAN UNTUK SELURUH PIC/Operator SEKOLAH!</p>
               <p className="text-sm text-gray-700 leading-relaxed">
-                Sebelumnya pengumpulan data dilakukan melalui <b>Google Forms tanpa validasi</b>, sehingga banyak ditemukan file yang tidak sesuai: template yang sudah tidak digunakan masih dipakai, bahkan <b>template guru digunakan untuk data siswa</b>. Mulai sekarang, portal ini dilengkapi <b>validasi otomatis</b>. File yang tidak sesuai template resmi akan <b>ditolak otomatis oleh sistem</b>.
+                Sebelumnya pengumpulan data dilakukan melalui <b>Google Forms tanpa validasi</b>, sehingga banyak ditemukan file yang tidak sesuai: template yang sudah tidak digunakan masih dipakai, bahkan <b>template guru digunakan untuk data siswa</b>. Mulai sekarang, portal ini dilengkapi <b>validasi otomatis</b>. File yang tidak sesuai template kami akan <b>ditolak otomatis oleh sistem</b>.
               </p>
               <ul className="text-sm text-gray-700 mt-2 list-disc list-inside space-y-1">
                 <li>Formulir Siswa → wajib pakai <b>Template Siswa</b>.</li>
