@@ -7,7 +7,7 @@ const EXPECTED_HEADER_SISWA = [
 ];
 
 const EXPECTED_HEADER_GURU = [
-  'nama sekolah', 'nama_lengkap', 'tanggal_lahir',
+  'nama_lengkap', 'tanggal_lahir',
   'gender', 'nik', 'sub_kategori'
 ];
 
