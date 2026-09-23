@@ -3,13 +3,14 @@ import StudentForm from './components/StudentForm';
 import TeacherForm from './components/TeacherForm';
 import Dashboard from './components/Dashboard';
 import AdminPanel from './components/AdminPanel';
+import TemplateModal from './components/TemplateModal';
 
 export default function App() {
-  const [activeForm, setActiveForm] = useState(null); // 'Siswa' | 'Guru' | null
+  const [activeForm, setActiveForm] = useState(null);
   const [notif, setNotif] = useState(null);
   const [showAdmin, setShowAdmin] = useState(false);
+  const [showTemplate, setShowTemplate] = useState(false);
 
-  // Cek status pengisian silang saat pertama kali load
   useEffect(() => {
     const submittedSiswa = localStorage.getItem('mbg_submitted_Siswa') === 'true';
     const submittedGuru = localStorage.getItem('mbg_submitted_Guru') === 'true';
@@ -21,19 +22,16 @@ export default function App() {
     }
   }, [activeForm, showAdmin]);
 
-  // Buka overlay formulir
   const openForm = (type) => {
     setActiveForm(type);
-    document.body.style.overflow = 'hidden'; // Kunci scroll background
+    document.body.style.overflow = 'hidden';
   };
 
-  // Tutup overlay formulir
   const closeForm = () => {
     setActiveForm(null);
-    document.body.style.overflow = 'auto'; // Kembalikan scroll
+    document.body.style.overflow = 'auto';
   };
 
-  // Dipanggil setelah submit berhasil dari form
   const handleSuccess = (type) => {
     localStorage.setItem(`mbg_submitted_${type}`, 'true');
     const otherType = type === 'Siswa' ? 'Guru' : 'Siswa';
@@ -45,20 +43,16 @@ export default function App() {
       setNotif(`✅ Data ${type} berhasil dikirim! Terima kasih, data Anda sudah lengkap.`);
     }
 
-    // Tutup overlay otomatis setelah 2 detik
     setTimeout(() => closeForm(), 2000);
-    // Hilangkan notifikasi setelah 10 detik
     setTimeout(() => setNotif(null), 10000);
   };
 
   return (
     <div className="min-h-screen bg-[#F1F8E9]">
-      
-      {/* ============ HEADER (Tema Badan Gizi Nasional) ============ */}
+      {/* HEADER */}
       <header className="bg-gradient-to-r from-[#1B5E20] to-[#2E7D32] shadow-lg sticky top-0 z-40">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            {/* Logo BGN */}
             <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-md">
               <span className="text-2xl">🌿</span>
             </div>
@@ -67,9 +61,7 @@ export default function App() {
               <p className="text-xs text-green-100">SPPG Jatian Pakusari · Badan Gizi Nasional</p>
             </div>
           </div>
-          
-          {/* Tombol Admin */}
-          <button 
+          <button
             onClick={() => setShowAdmin(true)}
             className="text-xs bg-[#F9A825] hover:bg-[#F57F17] text-[#1B5E20] font-semibold px-4 py-2 rounded-lg transition shadow-md"
           >
@@ -79,31 +71,23 @@ export default function App() {
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-8 space-y-6">
-        
-        {/* ============ MENU KECIL UNDUH TEMPLATE ============ */}
-        <div className="bg-white rounded-xl p-4 shadow-sm border border-green-100 animate-fade-in">
-          <p className="text-xs text-gray-600 mb-2 font-medium">📥 Unduh Template Resmi Sebelum Mengisi:</p>
-          <div className="flex flex-wrap gap-2">
-            <a 
-              href={`${import.meta.env.BASE_URL}templates/template-siswa.xlsx`} 
-              download
-              className="inline-flex items-center gap-2 bg-[#E8F5E9] hover:bg-[#C8E6C9] text-[#1B5E20] px-4 py-2 rounded-lg text-sm font-medium transition border border-[#4CAF50]/30"
-            >
-              📘 Template Siswa
-            </a>
-            <a 
-              href={`${import.meta.env.BASE_URL}templates/template-guru.xlsx`} 
-              download
-              className="inline-flex items-center gap-2 bg-[#FFF8E1] hover:bg-[#FFECB3] text-[#F57F17] px-4 py-2 rounded-lg text-sm font-medium transition border border-[#F9A825]/30"
-            >
-              📕 Template Guru & Pendukung
-            </a>
+
+        {/* TOMBOL TUNGGAL UNDUH TEMPLATE */}
+        <div className="bg-white rounded-xl p-4 shadow-sm border border-green-100 flex flex-wrap items-center justify-between gap-3 animate-fade-in">
+          <div>
+            <p className="text-sm font-semibold text-[#1B5E20]">📥 Unduh Template Resmi</p>
+            <p className="text-xs text-gray-500">Unduh template Excel resmi & lihat pratinjau file asli sebelum mengisi formulir.</p>
           </div>
+          <button
+            onClick={() => setShowTemplate(true)}
+            className="bg-[#2E7D32] hover:bg-[#1B5E20] text-white px-5 py-2.5 rounded-lg font-semibold transition shadow-md"
+          >
+            📥 Unduh Template
+          </button>
         </div>
 
-        {/* ============ MENU UTAMA: 2 KARTU BESAR ============ */}
+        {/* 2 KARTU MENU UTAMA */}
         <div className="grid md:grid-cols-2 gap-6">
-          {/* Kartu Siswa */}
           <button
             onClick={() => openForm('Siswa')}
             className="p-6 rounded-2xl border-2 border-[#4CAF50]/30 bg-white text-left transition-all hover:shadow-lg hover:border-[#2E7D32] hover:scale-[1.02]"
@@ -116,7 +100,6 @@ export default function App() {
             )}
           </button>
 
-          {/* Kartu Guru */}
           <button
             onClick={() => openForm('Guru')}
             className="p-6 rounded-2xl border-2 border-[#F9A825]/30 bg-white text-left transition-all hover:shadow-lg hover:border-[#F57F17] hover:scale-[1.02]"
@@ -130,30 +113,28 @@ export default function App() {
           </button>
         </div>
 
-        {/* ============ NOTIFIKASI SILANG ============ */}
+        {/* NOTIFIKASI SILANG */}
         {notif && (
           <div className="bg-[#FFF8E1] border-l-4 border-[#F9A825] p-4 rounded-r-lg shadow-sm animate-slide-down">
             <p className="text-sm text-[#E65100] font-medium">{notif}</p>
           </div>
         )}
 
-        {/* ============ DASHBOARD (Selalu tampil di bawah) ============ */}
+        {/* DASHBOARD */}
         <div className="pt-4">
           <Dashboard />
         </div>
 
       </main>
 
-      {/* ============ FOOTER ============ */}
       <footer className="text-center text-xs text-gray-500 py-8 bg-white border-t">
         © {new Date().getFullYear()} SPPG Jatian Pakusari · portalspggjatian.my.id · Badan Gizi Nasional
       </footer>
 
-      {/* ============ OVERLAY FORMULIR (FULL SCREEN) ============ */}
+      {/* OVERLAY FORMULIR */}
       {activeForm && (
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 backdrop-blur-sm animate-fade-in">
           <div className="relative w-full max-w-4xl mx-4 my-8 bg-white rounded-2xl shadow-2xl animate-slide-up">
-            {/* Tombol Close */}
             <button
               onClick={closeForm}
               className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center bg-gray-100 hover:bg-gray-200 rounded-full transition z-10"
@@ -163,8 +144,6 @@ export default function App() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
-
-            {/* Konten Form */}
             <div className="p-6 md:p-8">
               {activeForm === 'Siswa' && <StudentForm onSuccess={handleSuccess} />}
               {activeForm === 'Guru' && <TeacherForm onSuccess={handleSuccess} />}
@@ -173,9 +152,14 @@ export default function App() {
         </div>
       )}
 
-      {/* ============ OVERLAY PANEL ADMIN ============ */}
+      {/* OVERLAY ADMIN */}
       {showAdmin && (
         <AdminPanel onClose={() => setShowAdmin(false)} />
+      )}
+
+      {/* OVERLAY UNDUH TEMPLATE */}
+      {showTemplate && (
+        <TemplateModal onClose={() => setShowTemplate(false)} />
       )}
     </div>
   );
