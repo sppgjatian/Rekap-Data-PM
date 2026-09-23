@@ -69,8 +69,8 @@ export default function App() {
               />
             </div>
             <div>
-              <h1 className="text-lg md:text-xl font-bold text-white">Dashboard Monitoring Pengumpulan File</h1>
-              <p className="text-xs text-green-100">Pantau status validasi file yang telah diunggah</p>
+              <h1 className="text-lg md:text-xl font-bold text-white">SPPG JATIAN PAKUSARI</h1>
+              <p className="text-xs text-green-100">Dashboard Monitoring Pengumpulan File</p>
             </div>
           </div>
           <button
