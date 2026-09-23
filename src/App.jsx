@@ -53,8 +53,12 @@ export default function App() {
       <header className="bg-gradient-to-r from-[#1B5E20] to-[#2E7D32] shadow-lg sticky top-0 z-40">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-md">
-              <span className="text-2xl">🌿</span>
+            <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-md overflow-hidden p-1">
+              <img
+                src={`${import.meta.env.BASE_URL}logo-sppg.png`}
+                alt="Logo SPPG Jatian"
+                className="w-full h-full object-contain"
+              />
             </div>
             <div>
               <h1 className="text-lg md:text-xl font-bold text-white">Dashboard Monitoring Pengumpulan File</h1>
