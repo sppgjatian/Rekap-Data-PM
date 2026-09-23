@@ -3,5 +3,5 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
-  base: '/',  // PENTING: slash tunggal untuk domain custom
+  base: '/Rekap-Data-PM/',  // ← UBAH INI (tambah nama repo)
 });
