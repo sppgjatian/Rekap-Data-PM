@@ -114,7 +114,7 @@ export default function TeacherForm({ onSuccess }) {
       <div className="bg-white p-4 rounded-xl border-l-4 border-[#F9A825] mb-6 text-sm text-gray-700 space-y-1">
         <p>📌 Pastikan dokumen valid & sesuai data resmi sekolah.</p>
         <p>⚠️ Header dan format template tidak boleh diubah.</p>
-        <p>📞 Narahubung: <b>Diah Ayu Umami</b> — <a href="tel:+6285888009082" className="text-[#F57F17] underline">+62 858-8800-9082</a></p>
+        <p>📞 Bantuan: <b>Diah Ayu Umami</b> — <a href="tel:+6285888009082" className="text-[#F57F17] underline">+62 858-8800-9082</a></p>
       </div>
 
       <a href={`${import.meta.env.BASE_URL}templates/template-guru.xlsx`} download className="inline-flex items-center gap-2 bg-[#F9A825] hover:bg-[#F57F17] text-white px-5 py-2 rounded-lg mb-6 transition shadow-sm">
