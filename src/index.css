@@ -94,3 +94,26 @@ body {
   animation: blink-pulse 1.5s ease-in-out infinite;
   margin-right: 0.5rem;
 }
+
+@keyframes neon-glow {
+  0%, 100% {
+    text-shadow: 
+      0 0 5px #FFF,
+      0 0 10px #FFF,
+      0 0 20px #F59E0B,
+      0 0 40px #F59E0B;
+  }
+  50% {
+    text-shadow: 
+      0 0 2px #FFF,
+      0 0 5px #FFF,
+      0 0 10px #F59E0B,
+      0 0 20px #F59E0B;
+  }
+}
+
+.neon-text {
+  animation: neon-glow 1.5s ease-in-out infinite;
+  color: #FFF;
+  font-weight: 900;
+}
