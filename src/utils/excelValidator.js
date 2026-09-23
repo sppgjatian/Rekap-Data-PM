@@ -13,9 +13,7 @@ const EXPECTED_HEADER_GURU = [
 
 const VALID_GENDER = ['L', 'P', 'Laki-laki', 'Perempuan'];
 const VALID_SUB_KATEGORI_GURU = [
-  'Kepala Sekolah', 'Guru Mapel', 'Guru Kelas', 'Guru BK',
-  'Tenaga Kependidikan', 'Petugas Kebersihan', 'Petugas Keamanan',
-  'Petugas Penyaji Makanan', 'Pendamping'
+  'Guru', 'Satpam', 'Tenaga Kependidikan', 'Lainnya'
 ];
 
 const pad = (n) => String(n).padStart(2, '0');
