@@ -91,6 +91,7 @@ export default function StudentForm({ onSuccess }) {
       <div className="bg-white p-4 rounded-xl border-l-4 border-[#2E7D32] mb-6 text-sm text-gray-700 space-y-1">
         <p>📌 Unduh template dari <b>portalspggjatian.my.id</b>.</p>
         <p>⚠️ <b>Data Fix</b>: jangan ubah header, pastikan format penulisan benar.</p>
+        <p>⚠️ <b>Jangan gunakan template guru</b> untuk data siswa — sistem akan menolak otomatis.</p>
         <p>📞 Bantuan: <b>Diah Ayu Umami</b> — <a href="tel:+6285888009082" className="text-[#2E7D32] underline">+62 858-8800-9082</a></p>
       </div>
 
