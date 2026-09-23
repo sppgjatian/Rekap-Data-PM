@@ -108,9 +108,9 @@ export default function App() {
               </p>
               <ul className="text-sm text-gray-700 mt-2 list-disc list-inside space-y-1">
                 <li>Formulir Siswa → wajib pakai <b>Template Siswa</b>.</li>
-                <li>Formulir Guru & Pendukung → wajib pakai <b>Template Guru & Pendukung<b>.</li>
+                <li>Formulir Guru & Pendukung → wajib pakai <b>Template Guru & Pendukung</b>.</li>
                 <li>Jangan menukar template antar formulir — sistem akan mendeteksi dan menolaknya.</li>
-                <li><b>Unduh template terbaru hanya dari portal ini, jangan dari file lama/kiriman chat.<b></li>
+                <li><b>Unduh template terbaru hanya dari portal ini, jangan dari file lama/kiriman chat.</b></li>
               </ul>
             </div>
           </div>
