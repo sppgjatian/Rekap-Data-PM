@@ -21,6 +21,14 @@ export default function App() {
       setNotif('⚠️ Anda sudah mengisi Data Guru. Jangan lupa lengkapi juga Formulir Data Siswa.');
     }
   }, [activeForm, showAdmin]);
+  // Pasang favicon dari logo BGN di folder public
+  useEffect(() => {
+    const link = document.createElement('link');
+    link.rel = 'icon';
+    link.type = 'image/png';
+    link.href = `${import.meta.env.BASE_URL}favicon.png`;
+    document.head.appendChild(link);
+  }, []);
 
   const openForm = (type) => {
     setActiveForm(type);
