@@ -113,6 +113,7 @@ export default function TeacherForm({ onSuccess }) {
 
       <div className="bg-white p-4 rounded-xl border-l-4 border-[#F9A825] mb-6 text-sm text-gray-700 space-y-1">
         <p>📌 Pastikan dokumen valid & sesuai data resmi sekolah.</p>
+        <p>⚠️ <b>Jangan gunakan template siswa</b> untuk data guru/pendukung — sistem akan menolak otomatis.</p>
         <p>⚠️ Header dan format template tidak boleh diubah.</p>
         <p>📞 Bantuan: <b>Diah Ayu Umami</b> — <a href="tel:+6285888009082" className="text-[#F57F17] underline">+62 858-8800-9082</a></p>
       </div>
