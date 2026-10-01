@@ -27,7 +27,7 @@ export default function AdminPanel({ onClose }) {
   const [detailRows, setDetailRows] = useState([]);
   const [loadingDetail, setLoadingDetail] = useState(false);
 
-    const [showExport, setShowExport] = useState(false);
+  const [showExport, setShowExport] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editForm, setEditForm] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -120,20 +120,19 @@ export default function AdminPanel({ onClose }) {
 
   const deleteRow = async (row) => {
     const ok = window.confirm(
-      `HAPUS data "${row.nama_sekolah}" (${row.kategori_form})?\nFile di storage juga akan dihapus permanen.\nTindakan ini TIDAK bisa dibatalkan.`
+      `HAPUS data "${row.nama_sekolah}" (${row.kategori_form})?\nFile Excel akan DIPINDAH ke bucket "sampah" (bisa dipulihkan).\nData di database akan dihapus.`
     );
     if (!ok) return;
     try {
-      const { data, error } = await supabase.rpc('admin_delete_submission', {
-        p_id: row.id,
-        p_pin_admin: pin,
+      const { data, error } = await supabase.functions.invoke('admin-delete-submission', {
+        body: { id: row.id, pin },
       });
       if (error) throw error;
-      if (data === true) {
-          setActionMsg('🗑️ Data berhasil dihapus dari database. File Excel masih tersimpan di Storage (hapus manual bila perlu).');
+      if (data && data.ok === true) {
+        setActionMsg(`🗑️ Data dihapus dari database.${data.moved ? ' File Excel dipindahkan ke bucket "sampah".' : ' File tidak ditemukan di storage (data tetap terhapus).'}`);
         loadData(tab);
       } else {
-        setActionMsg('❌ Gagal menghapus: PIN admin tidak valid.');
+        setActionMsg('❌ Gagal menghapus: ' + (data?.error || 'penyebab tidak diketahui'));
       }
     } catch (err) {
       setActionMsg('❌ Gagal menghapus: ' + err.message);
@@ -257,7 +256,7 @@ export default function AdminPanel({ onClose }) {
                         )}
                         <button onClick={() => openEdit(r)} title="Edit data kiriman"
                           className="w-8 h-8 flex items-center justify-center rounded-lg bg-[#F9A825] hover:bg-[#F57F17] text-white text-sm transition">✏️</button>
-                        <button onClick={() => deleteRow(r)} title="Hapus data & file permanen"
+                        <button onClick={() => deleteRow(r)} title="Hapus data (file pindah ke bucket sampah)"
                           className="w-8 h-8 flex items-center justify-center rounded-lg bg-[#D32F2F] hover:bg-[#B71C1C] text-white text-sm transition">🗑️</button>
                       </div>
                     </td>
@@ -274,7 +273,7 @@ export default function AdminPanel({ onClose }) {
             </table>
           </div>
 
-          <p className="text-xs text-gray-500 mt-4">Total: {filtered.length} dokumen · 🗑️ menghapus data juga menghapus file di storage secara permanen.</p>
+          <p className="text-xs text-gray-500 mt-4">Total: {filtered.length} dokumen · 🗑️ hapus = data hilang dari database, file Excel pindah ke bucket "sampah" (bisa dipulihkan).</p>
         </div>
       </div>
 
@@ -360,7 +359,7 @@ export default function AdminPanel({ onClose }) {
         </div>
       )}
 
-            {/* ---------- EXPORT CENTER (📤) ---------- */}
+      {/* ---------- EXPORT CENTER (📤) ---------- */}
       {showExport && <ExportCenter onClose={() => setShowExport(false)} />}
 
       {/* ---------- MODAL EDIT (✏️) ---------- */}
