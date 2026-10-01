@@ -18,15 +18,18 @@ const VALID_SUB_KATEGORI_GURU = [
 
 const pad = (n) => String(n).padStart(2, '0');
 
-// Objek Date (dari Excel) -> "DD/MM/YYYY"
 const dateToDDMMYYYY = (d) =>
   `${pad(d.getUTCDate())}/${pad(d.getUTCMonth() + 1)}/${d.getUTCFullYear()}`;
 
-// Angka serial Excel (mis. 43624) -> "DD/MM/YYYY"
 const serialToDDMMYYYY = (serial) => {
   const ms = Math.round((serial - 25569) * 86400 * 1000);
   return dateToDDMMYYYY(new Date(ms));
 };
+
+const norm = (s) => String(s ?? '').trim().toLowerCase();
+
+const matchesHeader = (row, expected) =>
+  Array.isArray(row) && expected.every((col, i) => norm(row[i]) === col);
 
 export function parseExcel(file) {
   return new Promise((resolve, reject) => {
@@ -34,28 +37,29 @@ export function parseExcel(file) {
     reader.onload = (e) => {
       try {
         const data = new Uint8Array(e.target.result);
-        // cellDates: true -> sel tanggal Excel dibaca sebagai objek Date, bukan angka serial
         const wb = XLSX.read(data, { type: 'array', cellDates: true });
-        const ws = wb.Sheets[wb.SheetNames[0]];
-        const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
 
-        // Cari indeks kolom tanggal_lahir dari header (baris 1)
+        // Pilih sheet otomatis: prioritaskan yang headernya cocok template siswa/guru
+        let rows = null;
+        for (const name of wb.SheetNames) {
+          const r = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, defval: '' });
+          if (matchesHeader(r[0], EXPECTED_HEADER_SISWA) || matchesHeader(r[0], EXPECTED_HEADER_GURU)) {
+            rows = r;
+            break;
+          }
+        }
+        if (!rows) {
+          rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: '' });
+        }
+
         const header = rows[0] || [];
-        const dateCol = header.findIndex(
-          (h) => String(h).trim().toLowerCase() === 'tanggal_lahir'
-        );
+        const dateCol = header.findIndex((h) => norm(h) === 'tanggal_lahir');
 
-        // Normalisasi: objek Date & angka serial -> teks "DD/MM/YYYY"
+        // Normalisasi: objek Date & angka serial Excel -> teks "DD/MM/YYYY"
         const normalized = rows.map((row) =>
           row.map((cell, cIdx) => {
-            if (cell instanceof Date && !isNaN(cell.getTime())) {
-              return dateToDDMMYYYY(cell);
-            }
-            if (
-              cIdx === dateCol &&
-              typeof cell === 'number' &&
-              cell >= 20000 && cell <= 80000
-            ) {
+            if (cell instanceof Date && !isNaN(cell.getTime())) return dateToDDMMYYYY(cell);
+            if (cIdx === dateCol && typeof cell === 'number' && cell >= 20000 && cell <= 80000) {
               return serialToDDMMYYYY(cell);
             }
             return cell;
@@ -72,8 +76,6 @@ export function parseExcel(file) {
   });
 }
 
-const norm = (s) => String(s ?? '').trim().toLowerCase();
-
 export function validateExcel(rows, kategori) {
   const errors = [];
 
@@ -83,6 +85,17 @@ export function validateExcel(rows, kategori) {
 
   const headerRaw = rows[0].map(norm);
   const expected = kategori === 'Siswa' ? EXPECTED_HEADER_SISWA : EXPECTED_HEADER_GURU;
+
+  // Deteksi khusus: file tertukar antara template siswa <-> guru
+  const other = kategori === 'Siswa' ? EXPECTED_HEADER_GURU : EXPECTED_HEADER_SISWA;
+  const otherName = kategori === 'Siswa' ? 'GURU & PENDUKUNG' : 'SISWA';
+  if (matchesHeader(rows[0], other)) {
+    return {
+      ok: false,
+      errors: [`❌ TERTUKAR! File ini adalah template ${otherName}. Untuk formulir ${kategori.toUpperCase()}, gunakan template ${kategori.toUpperCase()} yang diunduh dari portal.`],
+      data: [],
+    };
+  }
 
   if (headerRaw.length < expected.length) {
     errors.push(`Jumlah kolom header kurang. Diharapkan ${expected.length} kolom, ditemukan ${headerRaw.length}.`);
@@ -121,7 +134,7 @@ export function validateExcel(rows, kategori) {
     if (obj.gender && !VALID_GENDER.includes(String(obj.gender).trim())) {
       errors.push(`Baris ${obj._row}: gender tidak valid. Harus "L" atau "P". Ditemukan: "${obj.gender}"`);
     }
-    if (kategori === 'Guru' && obj.sub_kategori && !VALID_SUB_KATEGORI_GURU.includes(String(obj.sub_kategori).trim())) {
+    if (kategori === 'Guru' && obj.sub_kategori && !VALID_SUB_KATEGORI_GURU.some((v) => v.toLowerCase() === String(obj.sub_kategori).trim().toLowerCase())) {
       errors.push(`Baris ${obj._row}: sub_kategori "${obj.sub_kategori}" tidak dikenal.`);
     }
 
