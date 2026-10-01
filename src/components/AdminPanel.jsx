@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
+import ExportCenter from './ExportCenter';
+import { derivePorsi } from '../utils/porsi';
 
 const InfoBlock = ({ info }) => (
   <div className="text-xs text-gray-600 space-y-0.5">
@@ -25,6 +27,7 @@ export default function AdminPanel({ onClose }) {
   const [detailRows, setDetailRows] = useState([]);
   const [loadingDetail, setLoadingDetail] = useState(false);
 
+    const [showExport, setShowExport] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editForm, setEditForm] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -195,7 +198,12 @@ export default function AdminPanel({ onClose }) {
               <h2 className="text-2xl font-bold text-[#1B5E20]">🔐 Panel Admin — Super User</h2>
               <p className="text-sm text-gray-500">Akses penuh: lihat, download, edit, dan hapus data</p>
             </div>
-            <span className="bg-[#F9A825] text-[#1B5E20] px-3 py-1 rounded-full text-xs font-bold">ADMIN MODE</span>
+            <div className="flex items-center gap-2">
+              <button onClick={() => setShowExport(true)} className="bg-[#1976D2] hover:bg-[#0D47A1] text-white px-4 py-2 rounded-lg text-sm font-semibold transition shadow-md">
+                📤 Export Center
+              </button>
+              <span className="bg-[#F9A825] text-[#1B5E20] px-3 py-1 rounded-full text-xs font-bold">ADMIN MODE</span>
+            </div>
           </div>
 
           <div className="flex gap-2 mb-4 border-b border-gray-200">
@@ -320,6 +328,7 @@ export default function AdminPanel({ onClose }) {
                         <th className="px-3 py-2 text-left">NIK</th>
                         {selected.kategori_form === 'Siswa' && <th className="px-3 py-2 text-left">Kategori</th>}
                         <th className="px-3 py-2 text-left">Sub Kategori</th>
+                        <th className="px-3 py-2 text-left">Porsi</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -332,6 +341,11 @@ export default function AdminPanel({ onClose }) {
                           <td className="px-3 py-2 font-mono text-xs">{d.nik || '-'}</td>
                           {selected.kategori_form === 'Siswa' && <td className="px-3 py-2">{d.kategori || '-'}</td>}
                           <td className="px-3 py-2">{d.sub_kategori || '-'}</td>
+                          <td className="px-3 py-2">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${derivePorsi(selected.kategori_form, d.kategori, d.sub_kategori) === 'KECIL' ? 'bg-sky-100 text-sky-700' : 'bg-orange-100 text-orange-700'}`}>
+                              {derivePorsi(selected.kategori_form, d.kategori, d.sub_kategori) === 'KECIL' ? '🥣 KECIL' : '🍛 BESAR'}
+                            </span>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -345,6 +359,9 @@ export default function AdminPanel({ onClose }) {
           </div>
         </div>
       )}
+
+            {/* ---------- EXPORT CENTER (📤) ---------- */}
+      {showExport && <ExportCenter onClose={() => setShowExport(false)} />}
 
       {/* ---------- MODAL EDIT (✏️) ---------- */}
       {editOpen && editForm && (
