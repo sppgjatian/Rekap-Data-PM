@@ -332,12 +332,16 @@ export default function ExportCenter({ onClose }) {
                       {m.file_url && <a href={m.file_url} target="_blank" rel="noreferrer" download className="text-xs bg-[#2E7D32] text-white px-2 py-1 rounded">📥 Unduh</a>}
                     </div>
                   ))}
-                  {filteredMeta.length === 0 && <p className="p-3 text-sm text-gray-400">Tidak ada file.</p>}
+                                  {filteredMeta.length === 0 && <p className="p-3 text-sm text-gray-400">Tidak ada file.</p>}
                 </div>
               </div>
             </>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
       </div>
     );
 }
