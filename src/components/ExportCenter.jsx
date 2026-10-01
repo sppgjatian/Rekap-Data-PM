@@ -335,10 +335,9 @@ export default function ExportCenter({ onClose }) {
                   {filteredMeta.length === 0 && <p className="p-3 text-sm text-gray-400">Tidak ada file.</p>}
                 </div>
               </div>
-            />
+            </>
           )}
         </div>
       </div>
-    </div>
-  );
+    );
 }
