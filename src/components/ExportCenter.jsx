@@ -5,6 +5,25 @@ import { derivePorsi, deriveJenjang } from '../utils/porsi';
 
 const norm = (s) => String(s || '').trim().toLowerCase();
 
+/* ---------- ambil SEMUA baris (paginasi per 1000) ---------- */
+const fetchAll = async (table, columns) => {
+  let out = [];
+  let from = 0;
+  const step = 1000;
+  for (;;) {
+    const { data, error } = await supabase
+      .from(table)
+      .select(columns)
+      .order('id')
+      .range(from, from + step - 1);
+    if (error) throw error;
+    out = out.concat(data || []);
+    if (!data || data.length < step) break;
+    from += step;
+  }
+  return out;
+};
+
 const JENJANG_GROUPS = {
   'PAUD/TK/RA': ['PAUD', 'TK', 'RA'],
   'SD/MI': ['SD', 'MI'],
@@ -49,13 +68,18 @@ export default function ExportCenter({ onClose }) {
 
   useEffect(() => {
     (async () => {
-      const [m, d] = await Promise.all([
-        supabase.from('submission_metadata').select('*'),
-        supabase.from('penerima_manfaat_detail').select('*'),
-      ]);
-      setMeta(m.data || []);
-      setDetails(d.data || []);
-      setLoading(false);
+      try {
+        const [m, d] = await Promise.all([
+          fetchAll('submission_metadata', '*'),
+          fetchAll('penerima_manfaat_detail', '*'),
+        ]);
+        setMeta(m);
+        setDetails(d);
+      } catch (e) {
+        setMsg('❌ Gagal memuat data: ' + e.message);
+      } finally {
+        setLoading(false);
+      }
     })();
   }, []);
 
@@ -311,7 +335,7 @@ export default function ExportCenter({ onClose }) {
                   {filteredMeta.length === 0 && <p className="p-3 text-sm text-gray-400">Tidak ada file.</p>}
                 </div>
               </div>
-            </>
+            />
           )}
         </div>
       </div>
