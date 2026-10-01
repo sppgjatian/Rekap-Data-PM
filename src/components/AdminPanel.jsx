@@ -12,6 +12,17 @@ const InfoBlock = ({ info }) => (
   </div>
 );
 
+/* ---------- bantuan gambar kotak membulat untuk canvas ---------- */
+const rr = (ctx, x, y, w, h, r) => {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+};
+
 export default function AdminPanel({ onClose }) {
   const [pin, setPin] = useState('');
   const [authenticated, setAuthenticated] = useState(false);
@@ -28,6 +39,10 @@ export default function AdminPanel({ onClose }) {
   const [loadingDetail, setLoadingDetail] = useState(false);
 
   const [showExport, setShowExport] = useState(false);
+  const [showSummary, setShowSummary] = useState(false);
+  const [summaryData, setSummaryData] = useState(null);
+  const [loadingSummary, setLoadingSummary] = useState(false);
+
   const [editOpen, setEditOpen] = useState(false);
   const [editForm, setEditForm] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -139,6 +154,176 @@ export default function AdminPanel({ onClose }) {
     }
   };
 
+  /* ---------- RINGKASAN PM ---------- */
+  const loadSummary = async () => {
+    setLoadingSummary(true);
+    const [m, d] = await Promise.all([
+      supabase.from('submission_metadata').select('id, nama_sekolah, kategori_form'),
+      supabase.from('penerima_manfaat_detail').select('submission_id, kategori, sub_kategori'),
+    ]);
+    const metaById = {};
+    (m.data || []).forEach((x) => { metaById[x.id] = x; });
+    const bySchool = {};
+    (d.data || []).forEach((row) => {
+      const meta = metaById[row.submission_id];
+      if (!meta) return;
+      if (!bySchool[meta.nama_sekolah]) bySchool[meta.nama_sekolah] = { besar: 0, kecil: 0 };
+      const porsi = derivePorsi(meta.kategori_form, row.kategori, row.sub_kategori);
+      bySchool[meta.nama_sekolah][porsi === 'KECIL' ? 'kecil' : 'besar']++;
+    });
+    setSummaryData(
+      Object.entries(bySchool)
+        .map(([sekolah, v]) => ({ sekolah, besar: v.besar, kecil: v.kecil, total: v.besar + v.kecil }))
+        .sort((a, b) => a.sekolah.localeCompare(b.sekolah))
+    );
+    setLoadingSummary(false);
+  };
+
+  const toggleSummary = () => {
+    const next = !showSummary;
+    setShowSummary(next);
+    if (next && !summaryData) loadSummary();
+  };
+
+  /* ---------- EXPORT GAMBAR (PNG) RINGKASAN PM ---------- */
+  const exportSummaryImage = () => {
+    if (!summaryData || summaryData.length === 0) {
+      setActionMsg('❌ Tidak ada data ringkasan untuk diekspor.');
+      return;
+    }
+    const pad = 24;
+    const width = 920;
+    const rowH = 34;
+    const headH = 40;
+    const titleBlock = 70;
+    const cardsBlock = 96;
+    const footerBlock = 44;
+    const n = summaryData.length;
+    const height = pad * 2 + titleBlock + cardsBlock + headH + rowH * (n + 1) + footerBlock;
+
+    const canvas = document.createElement('canvas');
+    const scale = 2;
+    canvas.width = width * scale;
+    canvas.height = height * scale;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(scale, scale);
+
+    const totalKecil = summaryData.reduce((a, r) => a + r.kecil, 0);
+    const totalBesar = summaryData.reduce((a, r) => a + r.besar, 0);
+
+    // latar
+    ctx.fillStyle = '#F1F8E9';
+    ctx.fillRect(0, 0, width, height);
+
+    // judul
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#1B5E20';
+    ctx.font = 'bold 24px Arial';
+    ctx.fillText('Ringkasan PM - Data Penerima Manfaat', pad, pad + 26);
+    ctx.fillStyle = '#6B7280';
+    ctx.font = '12px Arial';
+    ctx.fillText(
+      `Dicetak: ${new Date().toLocaleString('id-ID')}  ·  Kecil: PAUD/TK/RA & kelas 1-3  ·  Besar: kelas 4-13, guru & pendukung`,
+      pad, pad + 50
+    );
+
+    // kartu total
+    let y = pad + titleBlock;
+    const cardW = (width - pad * 2 - 36) / 4;
+    const cards = [
+      ['Sekolah', String(n), '#1B5E20'],
+      ['Porsi Kecil', String(totalKecil), '#0369A1'],
+      ['Porsi Besar', String(totalBesar), '#C2410C'],
+      ['Total Porsi', String(totalKecil + totalBesar), '#B45309'],
+    ];
+    cards.forEach((c, i) => {
+      const x = pad + i * (cardW + 12);
+      ctx.fillStyle = '#FFFFFF';
+      rr(ctx, x, y, cardW, 76, 10);
+      ctx.fill();
+      ctx.strokeStyle = '#C8E6C9';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.fillStyle = '#6B7280';
+      ctx.font = '11px Arial';
+      ctx.fillText(c[0], x + 12, y + 26);
+      ctx.fillStyle = c[2];
+      ctx.font = 'bold 26px Arial';
+      ctx.fillText(c[1], x + 12, y + 58);
+    });
+    y += cardsBlock;
+
+    // posisi kolom tabel
+    const colName = pad;
+    const colBesar = pad + 452;
+    const colKecil = pad + 592;
+    const colTotal = pad + 732;
+    const innerW = width - pad * 2;
+    const center = (text, cx, yy, font, color) => {
+      ctx.font = font;
+      ctx.fillStyle = color;
+      ctx.textAlign = 'center';
+      ctx.fillText(text, cx, yy);
+      ctx.textAlign = 'left';
+    };
+
+    // kepala tabel
+    ctx.fillStyle = '#E8F5E9';
+    ctx.fillRect(pad, y, innerW, headH);
+    ctx.font = 'bold 13px Arial';
+    ctx.fillStyle = '#1B5E20';
+    ctx.fillText('NAMA SEKOLAH', colName + 10, y + 25);
+    center('PORSI BESAR', colBesar + 70, y + 25, 'bold 13px Arial', '#1B5E20');
+    center('PORSI KECIL', colKecil + 70, y + 25, 'bold 13px Arial', '#1B5E20');
+    center('TOTAL PORSI', colTotal + 70, y + 25, 'bold 13px Arial', '#1B5E20');
+    y += headH;
+
+    // baris data
+    summaryData.forEach((r, i) => {
+      ctx.fillStyle = i % 2 === 0 ? '#FFFFFF' : '#F4FAEC';
+      ctx.fillRect(pad, y, innerW, rowH);
+      ctx.strokeStyle = '#E5E7EB';
+      ctx.beginPath();
+      ctx.moveTo(pad, y + rowH);
+      ctx.lineTo(width - pad, y + rowH);
+      ctx.stroke();
+      ctx.font = '13px Arial';
+      ctx.fillStyle = '#111827';
+      ctx.fillText(r.sekolah, colName + 10, y + 22);
+      center(String(r.besar), colBesar + 70, y + 22, 'bold 13px Arial', '#C2410C');
+      center(String(r.kecil), colKecil + 70, y + 22, 'bold 13px Arial', '#0369A1');
+      center(String(r.total), colTotal + 70, y + 22, 'bold 13px Arial', '#111827');
+      y += rowH;
+    });
+
+    // baris total
+    ctx.fillStyle = '#FFF8E1';
+    ctx.fillRect(pad, y, innerW, rowH);
+    ctx.font = 'bold 13px Arial';
+    ctx.fillStyle = '#1B5E20';
+    ctx.fillText('TOTAL KESELURUHAN', colName + 10, y + 22);
+    center(String(totalBesar), colBesar + 70, y + 22, 'bold 13px Arial', '#C2410C');
+    center(String(totalKecil), colKecil + 70, y + 22, 'bold 13px Arial', '#0369A1');
+    center(String(totalKecil + totalBesar), colTotal + 70, y + 22, 'bold 13px Arial', '#1B5E20');
+    y += rowH;
+
+    // kaki gambar
+    ctx.fillStyle = '#6B7280';
+    ctx.font = '11px Arial';
+    ctx.fillText('Sumber: Portal MBG SPPG Jatian Pakusari', pad, y + 26);
+
+    // unduh sebagai PNG
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Ringkasan_PM_${new Date().toISOString().slice(0, 10)}.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }, 'image/png');
+  };
+
   const filtered = rows.filter(r => {
     const s = search.toLowerCase();
     return (
@@ -198,12 +383,91 @@ export default function AdminPanel({ onClose }) {
               <p className="text-sm text-gray-500">Akses penuh: lihat, download, edit, dan hapus data</p>
             </div>
             <div className="flex items-center gap-2">
+              <button onClick={toggleSummary} className="bg-[#7B1FA2] hover:bg-[#4A148C] text-white px-4 py-2 rounded-lg text-sm font-semibold transition shadow-md">
+                📊 Ringkasan PM
+              </button>
               <button onClick={() => setShowExport(true)} className="bg-[#1976D2] hover:bg-[#0D47A1] text-white px-4 py-2 rounded-lg text-sm font-semibold transition shadow-md">
                 📤 Export Center
               </button>
               <span className="bg-[#F9A825] text-[#1B5E20] px-3 py-1 rounded-full text-xs font-bold">ADMIN MODE</span>
             </div>
           </div>
+
+          {/* ---------- RINGKASAN PM (📊) ---------- */}
+          {showSummary && (
+            <div className="mb-6 bg-[#F1F8E9] border-2 border-[#4CAF50]/30 rounded-xl p-4 animate-fade-in">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-bold text-[#1B5E20]">📊 Ringkasan PM — Data Penerima Manfaat</h3>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => exportSummaryImage()} className="text-xs bg-[#7B1FA2] hover:bg-[#4A148C] text-white px-3 py-1.5 rounded-lg font-semibold transition">
+                    🖼️ Export Gambar
+                  </button>
+                  <button onClick={() => loadSummary()} className="text-xs text-[#2E7D32] underline">🔄 Muat ulang</button>
+                </div>
+              </div>
+              <p className="text-xs text-gray-500 mb-3">
+                🥣 Kecil: PAUD/TK/RA & kelas 1–3 · 🍛 Besar: kelas 4–13, guru & pendukung · Hanya tampilan (tidak bisa diedit).
+              </p>
+              {loadingSummary && <p className="text-sm text-gray-500">Memuat ringkasan...</p>}
+              {!loadingSummary && summaryData && (
+                <>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
+                    <div className="bg-white rounded-lg p-3 text-center border border-[#4CAF50]/30">
+                      <p className="text-xs text-gray-500">Sekolah</p>
+                      <p className="text-xl font-bold text-[#1B5E20]">{summaryData.length}</p>
+                    </div>
+                    <div className="bg-white rounded-lg p-3 text-center border border-sky-200">
+                      <p className="text-xs text-gray-500">🥣 Porsi Kecil</p>
+                      <p className="text-xl font-bold text-sky-700">{summaryData.reduce((a, r) => a + r.kecil, 0)}</p>
+                    </div>
+                    <div className="bg-white rounded-lg p-3 text-center border border-orange-200">
+                      <p className="text-xs text-gray-500">🍛 Porsi Besar</p>
+                      <p className="text-xl font-bold text-orange-700">{summaryData.reduce((a, r) => a + r.besar, 0)}</p>
+                    </div>
+                    <div className="bg-white rounded-lg p-3 text-center border border-[#F9A825]/40">
+                      <p className="text-xs text-gray-500">Total Porsi</p>
+                      <p className="text-xl font-bold text-[#E65100]">{summaryData.reduce((a, r) => a + r.total, 0)}</p>
+                    </div>
+                  </div>
+                  <div className="overflow-x-auto bg-white rounded-lg border border-gray-200">
+                    <table className="w-full text-sm">
+                      <thead className="bg-[#E8F5E9] text-[#1B5E20] uppercase text-xs">
+                        <tr>
+                          <th className="text-left px-3 py-2">Nama Sekolah</th>
+                          <th className="text-center px-3 py-2">Porsi Besar</th>
+                          <th className="text-center px-3 py-2">Porsi Kecil</th>
+                          <th className="text-center px-3 py-2">Total Porsi</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {summaryData.map((r) => (
+                          <tr key={r.sekolah} className="border-t hover:bg-[#F1F8E9]">
+                            <td className="px-3 py-2 font-medium">{r.sekolah}</td>
+                            <td className="px-3 py-2 text-center text-orange-700 font-semibold">{r.besar}</td>
+                            <td className="px-3 py-2 text-center text-sky-700 font-semibold">{r.kecil}</td>
+                            <td className="px-3 py-2 text-center font-bold">{r.total}</td>
+                          </tr>
+                        ))}
+                        {summaryData.length === 0 && (
+                          <tr><td colSpan={4} className="text-center py-4 text-gray-400">Belum ada data penerima manfaat.</td></tr>
+                        )}
+                      </tbody>
+                      {summaryData.length > 0 && (
+                        <tfoot>
+                          <tr className="border-t-2 bg-[#FFF8E1] font-bold">
+                            <td className="px-3 py-2">TOTAL KESELURUHAN</td>
+                            <td className="px-3 py-2 text-center text-orange-700">{summaryData.reduce((a, r) => a + r.besar, 0)}</td>
+                            <td className="px-3 py-2 text-center text-sky-700">{summaryData.reduce((a, r) => a + r.kecil, 0)}</td>
+                            <td className="px-3 py-2 text-center">{summaryData.reduce((a, r) => a + r.total, 0)}</td>
+                          </tr>
+                        </tfoot>
+                      )}
+                    </table>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
 
           <div className="flex gap-2 mb-4 border-b border-gray-200">
             {['Siswa','Guru'].map((t) => (
