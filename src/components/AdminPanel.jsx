@@ -127,7 +127,7 @@ export default function AdminPanel({ onClose }) {
       });
       if (error) throw error;
       if (data === true) {
-        setActionMsg('🗑️ Data & file berhasil dihapus permanen.');
+          setActionMsg('🗑️ Data berhasil dihapus dari database. File Excel masih tersimpan di Storage (hapus manual bila perlu).');
         loadData(tab);
       } else {
         setActionMsg('❌ Gagal menghapus: PIN admin tidak valid.');
