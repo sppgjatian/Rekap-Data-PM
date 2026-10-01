@@ -23,6 +23,25 @@ const rr = (ctx, x, y, w, h, r) => {
   ctx.closePath();
 };
 
+/* ---------- ambil SEMUA baris (paginasi per 1000) ---------- */
+const fetchAll = async (table, columns) => {
+  let out = [];
+  let from = 0;
+  const step = 1000;
+  for (;;) {
+    const { data, error } = await supabase
+      .from(table)
+      .select(columns)
+      .order('id')
+      .range(from, from + step - 1);
+    if (error) throw error;
+    out = out.concat(data || []);
+    if (!data || data.length < step) break;
+    from += step;
+  }
+  return out;
+};
+
 export default function AdminPanel({ onClose }) {
   const [pin, setPin] = useState('');
   const [authenticated, setAuthenticated] = useState(false);
@@ -157,26 +176,31 @@ export default function AdminPanel({ onClose }) {
   /* ---------- RINGKASAN PM ---------- */
   const loadSummary = async () => {
     setLoadingSummary(true);
-    const [m, d] = await Promise.all([
-      supabase.from('submission_metadata').select('id, nama_sekolah, kategori_form'),
-      supabase.from('penerima_manfaat_detail').select('submission_id, kategori, sub_kategori'),
-    ]);
-    const metaById = {};
-    (m.data || []).forEach((x) => { metaById[x.id] = x; });
-    const bySchool = {};
-    (d.data || []).forEach((row) => {
-      const meta = metaById[row.submission_id];
-      if (!meta) return;
-      if (!bySchool[meta.nama_sekolah]) bySchool[meta.nama_sekolah] = { besar: 0, kecil: 0 };
-      const porsi = derivePorsi(meta.kategori_form, row.kategori, row.sub_kategori);
-      bySchool[meta.nama_sekolah][porsi === 'KECIL' ? 'kecil' : 'besar']++;
-    });
-    setSummaryData(
-      Object.entries(bySchool)
-        .map(([sekolah, v]) => ({ sekolah, besar: v.besar, kecil: v.kecil, total: v.besar + v.kecil }))
-        .sort((a, b) => a.sekolah.localeCompare(b.sekolah))
-    );
-    setLoadingSummary(false);
+    try {
+      const [m, d] = await Promise.all([
+        fetchAll('submission_metadata', 'id, nama_sekolah, kategori_form'),
+        fetchAll('penerima_manfaat_detail', 'submission_id, kategori, sub_kategori'),
+      ]);
+      const metaById = {};
+      m.forEach((x) => { metaById[x.id] = x; });
+      const bySchool = {};
+      d.forEach((row) => {
+        const meta = metaById[row.submission_id];
+        if (!meta) return;
+        if (!bySchool[meta.nama_sekolah]) bySchool[meta.nama_sekolah] = { besar: 0, kecil: 0 };
+        const porsi = derivePorsi(meta.kategori_form, row.kategori, row.sub_kategori);
+        bySchool[meta.nama_sekolah][porsi === 'KECIL' ? 'kecil' : 'besar']++;
+      });
+      setSummaryData(
+        Object.entries(bySchool)
+          .map(([sekolah, v]) => ({ sekolah, besar: v.besar, kecil: v.kecil, total: v.besar + v.kecil }))
+          .sort((a, b) => a.sekolah.localeCompare(b.sekolah))
+      );
+    } catch (err) {
+      setActionMsg('❌ Gagal memuat ringkasan: ' + err.message);
+    } finally {
+      setLoadingSummary(false);
+    }
   };
 
   const toggleSummary = () => {
@@ -211,11 +235,9 @@ export default function AdminPanel({ onClose }) {
     const totalKecil = summaryData.reduce((a, r) => a + r.kecil, 0);
     const totalBesar = summaryData.reduce((a, r) => a + r.besar, 0);
 
-    // latar
     ctx.fillStyle = '#F1F8E9';
     ctx.fillRect(0, 0, width, height);
 
-    // judul
     ctx.textAlign = 'left';
     ctx.fillStyle = '#1B5E20';
     ctx.font = 'bold 24px Arial';
@@ -227,7 +249,6 @@ export default function AdminPanel({ onClose }) {
       pad, pad + 50
     );
 
-    // kartu total
     let y = pad + titleBlock;
     const cardW = (width - pad * 2 - 36) / 4;
     const cards = [
@@ -253,7 +274,6 @@ export default function AdminPanel({ onClose }) {
     });
     y += cardsBlock;
 
-    // posisi kolom tabel
     const colName = pad;
     const colBesar = pad + 452;
     const colKecil = pad + 592;
@@ -267,7 +287,6 @@ export default function AdminPanel({ onClose }) {
       ctx.textAlign = 'left';
     };
 
-    // kepala tabel
     ctx.fillStyle = '#E8F5E9';
     ctx.fillRect(pad, y, innerW, headH);
     ctx.font = 'bold 13px Arial';
@@ -278,7 +297,6 @@ export default function AdminPanel({ onClose }) {
     center('TOTAL PORSI', colTotal + 70, y + 25, 'bold 13px Arial', '#1B5E20');
     y += headH;
 
-    // baris data
     summaryData.forEach((r, i) => {
       ctx.fillStyle = i % 2 === 0 ? '#FFFFFF' : '#F4FAEC';
       ctx.fillRect(pad, y, innerW, rowH);
@@ -296,7 +314,6 @@ export default function AdminPanel({ onClose }) {
       y += rowH;
     });
 
-    // baris total
     ctx.fillStyle = '#FFF8E1';
     ctx.fillRect(pad, y, innerW, rowH);
     ctx.font = 'bold 13px Arial';
@@ -307,12 +324,10 @@ export default function AdminPanel({ onClose }) {
     center(String(totalKecil + totalBesar), colTotal + 70, y + 22, 'bold 13px Arial', '#1B5E20');
     y += rowH;
 
-    // kaki gambar
     ctx.fillStyle = '#6B7280';
     ctx.font = '11px Arial';
     ctx.fillText('Sumber: Portal MBG SPPG Jatian Pakusari', pad, y + 26);
 
-    // unduh sebagai PNG
     canvas.toBlob((blob) => {
       if (!blob) return;
       const url = URL.createObjectURL(blob);
