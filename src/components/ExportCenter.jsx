@@ -323,7 +323,7 @@ export default function ExportCenter({ onClose }) {
               </div>
               {msg && <p className="text-sm font-medium text-[#1B5E20]">{msg}</p>}
 
-              <div>
+                           <div>
                 <p className="text-sm font-semibold text-[#1B5E20] mb-2">📦 File Asli Pengiriman (sesuai lingkup)</p>
                 <div className="max-h-40 overflow-y-auto border border-gray-200 rounded-lg divide-y divide-gray-100">
                   {filteredMeta.map((m) => (
@@ -332,7 +332,7 @@ export default function ExportCenter({ onClose }) {
                       {m.file_url && <a href={m.file_url} target="_blank" rel="noreferrer" download className="text-xs bg-[#2E7D32] text-white px-2 py-1 rounded">📥 Unduh</a>}
                     </div>
                   ))}
-                                  {filteredMeta.length === 0 && <p className="p-3 text-sm text-gray-400">Tidak ada file.</p>}
+                  {filteredMeta.length === 0 && <p className="p-3 text-sm text-gray-400">Tidak ada file.</p>}
                 </div>
               </div>
             </>
@@ -341,7 +341,4 @@ export default function ExportCenter({ onClose }) {
       </div>
     </div>
   );
-}
-      </div>
-    );
 }
