@@ -552,7 +552,7 @@ export default function AdminPanel({ onClose }) {
             </table>
           </div>
 
-          <p className="text-xs text-gray-500 mt-4">Total: {filtered.length} dokumen · 🗑️ hapus = data hilang dari database, file Excel pindah ke bucket "sampah" (bisa dipulihkan).</p>
+          <p className="text-xs text-gray-500 mt-4">Total: {filtered.length} dokumen .</p>
         </div>
       </div>
 
