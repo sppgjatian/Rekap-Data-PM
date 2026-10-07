@@ -73,12 +73,22 @@ export default function App() {
               <p className="text-xs text-green-100">Dashboard Monitoring Pengumpulan File</p>
             </div>
           </div>
-          <button
-            onClick={() => setShowAdmin(true)}
-            className="text-xs bg-[#F9A825] hover:bg-[#F57F17] text-[#1B5E20] font-semibold px-4 py-2 rounded-lg transition shadow-md"
-          >
-            🔐 Admin
-          </button>
+                    <div className="flex items-center gap-2">
+            <a
+              href="https://sppgjatian.my.id/pmdashboard/"
+              target="_blank"
+              rel="noreferrer"
+              className="text-xs bg-white hover:bg-green-50 text-[#1B5E20] font-semibold px-4 py-2 rounded-lg transition shadow-md border border-green-200"
+            >
+              📊 Rekonsiliasi
+            </a>
+            <button
+              onClick={() => setShowAdmin(true)}
+              className="text-xs bg-[#F9A825] hover:bg-[#F57F17] text-[#1B5E20] font-semibold px-4 py-2 rounded-lg transition shadow-md"
+            >
+              🔐 Admin
+            </button>
+          </div>
         </div>
       </header>
 
