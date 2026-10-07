@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rekonsiliasi PM berbasis NPSN — SPPG Jember Pakusari Jatian</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<button id="mobileMenuBtn" class="lg:hidden fixed top-4 right-4 z-50 bg-emerald-600 text-white w-11 h-11 rounded-full shadow-lg"><i class="fas fa-bars"></i></button>
+
+<aside id="sidebar" class="fixed left-0 top-0 h-full w-72 bg-white shadow-2xl -translate-x-full lg:translate-x-0 transition-transform duration-300 z-40 flex flex-col">
+  <div class="p-6 border-b border-gray-100">
+    <div class="flex items-center gap-3">
+      <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center text-lg shadow"><i class="fas fa-utensils"></i></div>
+      <div>
+        <h1 class="font-extrabold text-gray-800 leading-tight">Rekonsiliasi PM</h1>
+        <p class="text-[11px] text-gray-500">Berbasis NPSN • SPPG Jember Pakusari Jatian</p>
+      </div>
+    </div>
+  </div>
+  <nav class="p-4 space-y-1 flex-1 overflow-y-auto">
+    <button data-page="dashboard" class="nav-btn active"><i class="fas fa-gauge-high"></i> Dashboard</button>
+    <button data-page="sps" class="nav-btn"><i class="fas fa-file-contract"></i> SPS / Dapodik (Surat)</button>
+    <button data-page="aslap" class="nav-btn"><i class="fas fa-clipboard-list"></i> Aslap Lapangan</button>
+    <button data-page="rekon" class="nav-btn"><i class="fas fa-code-compare"></i> Rekonsiliasi NPSN</button>
+    <button data-page="export" class="nav-btn"><i class="fas fa-file-export"></i> Export Laporan</button>
+  </nav>
+  <div class="p-4 border-t border-gray-100 space-y-2">
+    <button id="btnReset" class="w-full text-xs px-3 py-2 rounded-lg border border-red-200 text-red-600 hover:bg-red-50"><i class="fas fa-rotate-left mr-1"></i> Reset Semua Edit & Padanan</button>
+    <p class="text-[10px] text-gray-400 text-center">Statis + localStorage • siap migrasi Supabase</p>
+  </div>
+</aside>
+
+<div id="overlay" class="fixed inset-0 bg-black/50 z-30 hidden lg:hidden"></div>
+
+<main class="lg:ml-72 min-h-screen p-4 lg:p-8">
+  <header class="mb-6 flex flex-col md:flex-row md:items-end justify-between gap-3">
+    <div>
+      <h2 id="pageTitle" class="text-2xl lg:text-3xl font-extrabold text-gray-800">Dashboard</h2>
+      <p id="pageSubtitle" class="text-sm text-gray-500 mt-1"></p>
+    </div>
+    <div class="text-xs text-gray-400" id="headerMeta"></div>
+  </header>
+
+  <!-- DASHBOARD -->
+  <section id="page-dashboard" class="page space-y-6">
+    <div class="grid grid-cols-2 xl:grid-cols-4 gap-4">
+      <div class="card"><p class="card-label text-violet-600">Alokasi Surat (SPS/Dapodik)</p><h3 id="statSps" class="card-num text-violet-700">0</h3><p id="statSpsSub" class="card-sub"></p></div>
+      <div class="card"><p class="card-label text-emerald-600">Porsi Aslap Lapangan</p><h3 id="statAslap" class="card-num text-emerald-700">0</h3><p id="statAslapSub" class="card-sub"></p></div>
+      <div class="card"><p class="card-label text-blue-600">Pasangan Terkunci NPSN</p><h3 id="statPair" class="card-num text-blue-700">0</h3><p id="statPairSub" class="card-sub"></p></div>
+      <div class="card"><p class="card-label text-amber-600">Selisih Netto (berpasangan)</p><h3 id="statNetto" class="card-num">0</h3><p class="card-sub">Total Aslap − Alokasi Surat</p></div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="card lg:col-span-2">
+        <h3 class="card-title"><i class="fas fa-chart-column text-emerald-600"></i> Surat vs Aslap pada pasangan NPSN (terbesar)</h3>
+        <div class="h-72"><canvas id="chartMain"></canvas></div>
+      </div>
+      <div class="card">
+        <h3 class="card-title"><i class="fas fa-chart-pie text-orange-500"></i> Komposisi Porsi Aslap</h3>
+        <div class="h-48"><canvas id="chartPorsi"></canvas></div>
+        <div class="mt-4 space-y-2" id="statusList"></div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div class="card">
+        <h3 class="card-title"><i class="fas fa-lightbulb text-amber-500"></i> Insight Otomatis</h3>
+        <ul id="insightList" class="space-y-2 text-sm text-gray-600 list-disc pl-5"></ul>
+      </div>
+      <div class="card">
+        <h3 class="card-title"><i class="fas fa-link-slash text-red-400"></i> Belum Berpasangan</h3>
+        <div id="unmatchedBox" class="space-y-3 text-sm"></div>
+      </div>
+    </div>
+
+    <div class="card bg-emerald-50/60 border-emerald-100">
+      <h3 class="card-title"><i class="fas fa-circle-info text-emerald-600"></i> Sumber Data & Metodologi</h3>
+      <div id="sourceInfo" class="text-sm text-gray-600 space-y-1"></div>
+    </div>
+  </section>
+
+  <!-- SPS -->
+  <section id="page-sps" class="page hidden space-y-4">
+    <div class="card flex flex-col md:flex-row gap-3 md:items-center justify-between">
+      <input id="spsSearch" type="text" placeholder="Cari nama / NPSN / kelurahan…" class="input flex-1">
+      <span id="spsCount" class="text-xs text-gray-500"></span>
+    </div>
+    <div class="card p-0">
+      <div class="table-wrap">
+        <table class="tbl">
+          <thead><tr><th>No</th><th>NPSN</th><th>Nama Sekolah (Surat)</th><th>Kec/Kel</th><th class="text-center">Total PM</th><th class="text-center">Padanan Aslap</th><th class="text-center">Aksi</th></tr></thead>
+          <tbody id="spsBody"></tbody>
+          <tfoot><tr><td colspan="4" class="text-right font-bold">TOTAL ALOKASI SPS/DAPODIK</td><td id="spsFoot" class="text-center font-extrabold text-violet-700"></td><td colspan="2"></td></tr></tfoot>
+        </table>
+      </div>
+      <p class="p-4 text-xs text-gray-400">Klik angka Total PM untuk koreksi. Sumber: Lampiran I Surat <b>B-53171/06/VIII/2026</b> (Dapodik TA 2026/2027). Surat tidak memuat rincian porsi besar/kecil.</p>
+    </div>
+  </section>
+
+  <!-- ASLAP -->
+  <section id="page-aslap" class="page hidden space-y-4">
+    <div class="card flex flex-col md:flex-row gap-3 md:items-center justify-between">
+      <input id="aslapSearch" type="text" placeholder="Cari nama sekolah / NPSN…" class="input flex-1">
+      <span id="aslapCount" class="text-xs text-gray-500"></span>
+    </div>
+    <div class="card p-0">
+      <div class="table-wrap">
+        <table class="tbl">
+          <thead><tr><th>No</th><th>Nama Sekolah (Aslap)</th><th>NPSN (jembatan)</th><th>Jenjang</th><th class="text-center">Besar</th><th class="text-center">Kecil</th><th class="text-center">Total</th><th class="text-center">Aksi</th></tr></thead>
+          <tbody id="aslapBody"></tbody>
+          <tfoot><tr><td colspan="4" class="text-right font-bold">TOTAL ASLAP LAPANGAN</td><td id="aslapFootB" class="text-center font-extrabold text-orange-600"></td><td id="aslapFootK" class="text-center font-extrabold text-cyan-600"></td><td id="aslapFootT" class="text-center font-extrabold text-emerald-700"></td><td></td></tr></tfoot>
+        </table>
+      </div>
+      <p class="p-4 text-xs text-gray-400">Klik angka Besar/Kecil untuk koreksi. Total = Besar + Kecil (otomatis). NPSN diambil dari Daftar Sekolah lama (ekspor 7 Okt 2026) sebagai jembatan identitas.</p>
+    </div>
+  </section>
+
+  <!-- REKON -->
+  <section id="page-rekon" class="page hidden space-y-4">
+    <div class="card flex flex-col lg:flex-row gap-3">
+      <input id="rekonSearch" type="text" placeholder="Cari nama / NPSN…" class="input flex-1">
+      <select id="rekonStatus" class="input bg-white">
+        <option value="all">Semua Status</option>
+        <option value="Cocok">Cocok</option>
+        <option value="Selisih">Selisih</option>
+        <option value="Hanya di Aslap">Hanya di Aslap</option>
+        <option value="Hanya di SPS/Dapodik">Hanya di SPS/Dapodik</option>
+      </select>
+    </div>
+    <div class="card p-0">
+      <div class="table-wrap">
+        <table class="tbl">
+          <thead><tr>
+            <th>No</th>
+            <th class="cursor-pointer" data-sort="npsn">NPSN <i class="fas fa-sort text-gray-300"></i></th>
+            <th class="cursor-pointer" data-sort="nama">Sekolah / Jenjang <i class="fas fa-sort text-gray-300"></i></th>
+            <th class="text-center cursor-pointer" data-sort="sps">Alokasi Surat <i class="fas fa-sort text-gray-300"></i></th>
+            <th class="text-center">Besar</th><th class="text-center">Kecil</th>
+            <th class="text-center cursor-pointer" data-sort="aslap">Total Aslap <i class="fas fa-sort text-gray-300"></i></th>
+            <th class="text-center cursor-pointer" data-sort="selisih">Selisih <i class="fas fa-sort text-gray-300"></i></th>
+            <th class="text-center">Status</th><th class="text-center">Detail</th>
+          </tr></thead>
+          <tbody id="rekonBody"></tbody>
+          <tfoot><tr>
+            <td colspan="3" class="text-right font-bold">TOTAL (baris tampil)</td>
+            <td id="rekonFootSps" class="text-center font-extrabold text-violet-700"></td>
+            <td id="rekonFootB" class="text-center font-extrabold text-orange-600"></td>
+            <td id="rekonFootK" class="text-center font-extrabold text-cyan-600"></td>
+            <td id="rekonFootA" class="text-center font-extrabold text-emerald-700"></td>
+            <td id="rekonFootD" class="text-center font-extrabold"></td>
+            <td colspan="2"></td>
+          </tr></tfoot>
+        </table>
+      </div>
+      <p class="p-4 text-xs text-gray-400">Selisih = Total Aslap − Alokasi Surat. Baris tanpa padanan menampilkan selisih penuh nilainya. Klik <b>Detail</b> untuk kontak PIC/WA & koreksi padanan NPSN.</p>
+    </div>
+  </section>
+
+  <!-- EXPORT -->
+  <section id="page-export" class="page hidden">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <button onclick="exportExcel()" class="export-card group"><div class="export-ico bg-green-100 text-green-600 group-hover:scale-110"><i class="fas fa-file-excel"></i></div><h4>Excel (.xlsx)</h4><p>4 sheet: Rekonsiliasi, SPS, Aslap, Referensi Sekolah</p></button>
+      <button onclick="exportPDF()" class="export-card group"><div class="export-ico bg-red-100 text-red-600 group-hover:scale-110"><i class="fas fa-file-pdf"></i></div><h4>PDF Laporan</h4><p>Tabel rekonsiliasi berbasis NPSN</p></button>
+      <button onclick="exportPNG()" class="export-card group"><div class="export-ico bg-blue-100 text-blue-600 group-hover:scale-110"><i class="fas fa-image"></i></div><h4>Gambar (.png)</h4><p>Tangkapan layar dashboard</p></button>
+    </div>
+  </section>
+</main>
+
+<!-- MODAL DETAIL -->
+<div id="detailModal" class="fixed inset-0 z-50 hidden">
+  <div class="absolute inset-0 bg-black/50" onclick="closeModal()"></div>
+  <div class="absolute inset-x-0 bottom-0 lg:inset-0 lg:flex lg:items-center lg:justify-center lg:p-6 pointer-events-none">
+    <div class="bg-white w-full lg:max-w-2xl lg:rounded-2xl rounded-t-2xl shadow-2xl max-h-[88vh] overflow-y-auto pointer-events-auto">
+      <div class="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between">
+        <h3 id="mdTitle" class="font-extrabold text-gray-800"></h3>
+        <button onclick="closeModal()" class="w-9 h-9 rounded-full hover:bg-gray-100 text-gray-500"><i class="fas fa-xmark"></i></button>
+      </div>
+      <div id="mdBody" class="px-6 py-5 space-y-4 text-sm"></div>
+    </div>
+  </div>
+</div>
+
+<div id="toastWrap" class="fixed bottom-5 right-5 z-[60] space-y-2 w-80 max-w-[90vw]"></div>
+
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
