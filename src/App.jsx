@@ -75,7 +75,7 @@ export default function App() {
           </div>
                     <div className="flex items-center gap-2">
             <a
-              href="https://sppgjatian.my.id/pmdashboard/"
+              href="https://portalsppgjatian.my.id/pmdashboard/"
               target="_blank"
               rel="noreferrer"
               className="text-xs bg-white hover:bg-green-50 text-[#1B5E20] font-semibold px-4 py-2 rounded-lg transition shadow-md border border-green-200"
