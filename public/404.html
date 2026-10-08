@@ -1,1 +1,20 @@
-
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Mengalihkan...</title>
+<script>
+  (function () {
+    var knownBases = ['/Rekap-Data-PM'];
+    var base = '';
+    for (var i = 0; i < knownBases.length; i++) {
+      if (location.pathname.indexOf(knownBases[i]) === 0) { base = knownBases[i]; break; }
+    }
+    var target = location.pathname.slice(base.length) + location.search + location.hash;
+    sessionStorage.setItem('spa-redirect', target);
+    location.replace(base + '/' + location.search + location.hash);
+  })();
+</script>
+</head>
+<body>Mengalihkan...</body>
+</html>
