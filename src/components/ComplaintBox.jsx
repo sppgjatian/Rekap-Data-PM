@@ -24,7 +24,7 @@ const SOCIAL_LINKS = [
   { label: 'TikTok', icon: '🎵', url: 'https://www.tiktok.com/@sppgjatian' },
   { label: 'Instagram', icon: '📸', url: 'https://www.instagram.com/sppgjatian/' },
   { label: 'WhatsApp', icon: '💬', url: 'https://wa.me/6285888009082' },
-  { label: 'Google Maps', icon: '📍', url: 'https://maps.app.goo.gl/T6mUkqHFpeys8rRF9' },
+  { label: 'Google Maps', icon: '📍', url: 'https://maps.app.goo.gl/8gbdq6m6NPGefaQw8' },
 ];
 
 export default function ComplaintBox({ onNavigate }) {
