@@ -4,12 +4,47 @@ import TeacherForm from './components/TeacherForm';
 import Dashboard from './components/Dashboard';
 import AdminPanel from './components/AdminPanel';
 import TemplateModal from './components/TemplateModal';
+import ComplaintBox from './components/ComplaintBox';
+import MenuInfo from './components/MenuInfo';
+import MenuInfoStaff from './components/MenuInfoStaff';
+import { supabase } from './lib/supabase';
+import { optimizedUrl } from './utils/cloudinary';
+
+/* ---------- Routing sederhana tanpa react-router (aman untuk GitHub Pages) ---------- */
+const KNOWN_ROUTES = ['/', '/kotakpengaduan', '/informasimenu', '/informasimenu/staff'];
+
+const getRoute = () => {
+  const base = import.meta.env.BASE_URL || '/';
+  let path = window.location.pathname;
+  if (base !== '/' && path.startsWith(base)) path = path.slice(base.length - 1);
+  if (!path.startsWith('/')) path = '/' + path;
+  if (path.length > 1 && path.endsWith('/')) path = path.slice(0, -1);
+  if (path === '') path = '/';
+  return KNOWN_ROUTES.includes(path) ? path : '/';
+};
 
 export default function App() {
+  const [route, setRoute] = useState(getRoute);
   const [activeForm, setActiveForm] = useState(null);
   const [notif, setNotif] = useState(null);
   const [showAdmin, setShowAdmin] = useState(false);
   const [showTemplate, setShowTemplate] = useState(false);
+  const [latestFlyer, setLatestFlyer] = useState(null);
+
+  /* Sinkronisasi tombol back/forward browser */
+  useEffect(() => {
+    const onPop = () => setRoute(getRoute());
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+
+  const navigate = (to) => {
+    const base = import.meta.env.BASE_URL || '/';
+    const clean = to === '/' ? '' : to.replace(/^\//, '');
+    window.history.pushState({}, '', base + clean);
+    setRoute(getRoute());
+    window.scrollTo({ top: 0 });
+  };
 
   useEffect(() => {
     const submittedSiswa = localStorage.getItem('mbg_submitted_Siswa') === 'true';
@@ -21,7 +56,8 @@ export default function App() {
       setNotif('⚠️ Anda sudah mengisi Data Guru. Jangan lupa lengkapi juga Formulir Data Siswa.');
     }
   }, [activeForm, showAdmin]);
-  // Pasang favicon dari logo BGN di folder public
+
+  /* Pasang favicon dari logo BGN di folder public */
   useEffect(() => {
     const link = document.createElement('link');
     link.rel = 'icon';
@@ -29,6 +65,20 @@ export default function App() {
     link.href = `${import.meta.env.BASE_URL}favicon.png`;
     document.head.appendChild(link);
   }, []);
+
+  /* Ambil 1 flyer terbaru saja untuk card di beranda (hemat bandwidth) */
+  useEffect(() => {
+    if (route !== '/') { setLatestFlyer(null); return; }
+    let alive = true;
+    supabase
+      .from('menu_info')
+      .select('id, image_url, uploaded_at')
+      .order('uploaded_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => { if (alive) setLatestFlyer(data); });
+    return () => { alive = false; };
+  }, [route]);
 
   const openForm = (type) => {
     setActiveForm(type);
@@ -59,7 +109,7 @@ export default function App() {
     <div className="min-h-screen bg-[#F1F8E9]">
       {/* HEADER */}
       <header className="bg-gradient-to-r from-[#1B5E20] to-[#2E7D32] shadow-lg sticky top-0 z-40">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between gap-2">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-md overflow-hidden p-1">
               <img
@@ -73,18 +123,30 @@ export default function App() {
               <p className="text-xs text-green-100">Dashboard Monitoring Pengumpulan File</p>
             </div>
           </div>
-                              <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap justify-end">
+            <button
+              onClick={() => navigate('/kotakpengaduan')}
+              className="text-xs bg-white hover:bg-green-50 text-[#1B5E20] font-semibold px-3 py-2 rounded-lg transition shadow-md"
+            >
+              📮 Pengaduan
+            </button>
+            <button
+              onClick={() => navigate('/informasimenu')}
+              className="text-xs bg-white hover:bg-green-50 text-[#1B5E20] font-semibold px-3 py-2 rounded-lg transition shadow-md"
+            >
+              📢 Info Menu
+            </button>
             <a
               href={`${import.meta.env.BASE_URL}pmdashboard/`}
               target="_blank"
               rel="noreferrer"
-              className="text-xs bg-white hover:bg-green-50 text-[#1B5E20] font-semibold px-4 py-2 rounded-lg transition shadow-md"
+              className="text-xs bg-white hover:bg-green-50 text-[#1B5E20] font-semibold px-3 py-2 rounded-lg transition shadow-md"
             >
               📊 PM Dashboard
             </a>
             <button
               onClick={() => setShowAdmin(true)}
-              className="text-xs bg-[#F9A825] hover:bg-[#F57F17] text-[#1B5E20] font-semibold px-4 py-2 rounded-lg transition shadow-md"
+              className="text-xs bg-[#F9A825] hover:bg-[#F57F17] text-[#1B5E20] font-semibold px-3 py-2 rounded-lg transition shadow-md"
             >
               🔐 Admin
             </button>
@@ -94,76 +156,122 @@ export default function App() {
 
       <main className="max-w-6xl mx-auto px-4 py-8 space-y-6">
 
-        {/* TOMBOL TUNGGAL UNDUH TEMPLATE */}
-        <div className="bg-white rounded-xl p-4 shadow-sm border border-green-100 flex flex-wrap items-center justify-between gap-3 animate-fade-in">
-          <div>
-            <p className="text-sm font-semibold text-[#1B5E20]">📥 Unduh Template</p>
-            <p className="text-xs text-gray-500">Wajib Menggunakan Template dari kami</p>
-          </div>
-          <button
-            onClick={() => setShowTemplate(true)}
-            className="bg-[#2E7D32] hover:bg-[#1B5E20] text-white px-5 py-2.5 rounded-lg font-semibold transition shadow-md"
-          >
-            📥 Unduh Template
-          </button>
-        </div>
-        {/* BANNER PENGUMUMAN PENTING */}
-        <div className="bg-[#FFF3E0] border-2 border-[#F57C00] rounded-xl p-4 shadow-sm animate-fade-in">
-          <div className="flex items-start gap-3">
-            <span className="text-2xl">⚠️</span>
-            <div>
-              <p className="font-bold text-[#E65100] text-sm mb-1">PENGUMUMAN UNTUK SELURUH PIC/Operator SEKOLAH!</p>
-              <p className="text-sm text-gray-700 leading-relaxed">
-                Sebelumnya pengumpulan data dilakukan melalui <b>Google Forms tanpa validasi</b>, sehingga banyak ditemukan file yang tidak sesuai: template yang sudah tidak digunakan masih dipakai, bahkan <b>template guru digunakan untuk data siswa</b>. Mulai sekarang, portal ini dilengkapi <b>validasi otomatis</b>. File yang tidak sesuai template kami akan <b>ditolak otomatis oleh sistem</b>.
-              </p>
-              <ul className="text-sm text-gray-700 mt-2 list-disc list-inside space-y-1">
-                <li>Formulir Siswa → wajib pakai <b>Template Siswa</b>.</li>
-                <li>Formulir Guru & Pendukung → wajib pakai <b>Template Guru & Pendukung</b>.</li>
-                <li>Jangan menukar template antar formulir — sistem akan mendeteksi dan menolaknya.</li>
-                <li><span className="blink-warning"> <span className="blink-icon">🚨</span> Unduh template terbaru HANYA dari portal ini, JANGAN dari file lama/kiriman chat! </span></li>
-              </ul>
+        {/* ================= BERANDA ================= */}
+        {route === '/' && (
+          <>
+            {/* TOMBOL TUNGGAL UNDUH TEMPLATE */}
+            <div className="bg-white rounded-xl p-4 shadow-sm border border-green-100 flex flex-wrap items-center justify-between gap-3 animate-fade-in">
+              <div>
+                <p className="text-sm font-semibold text-[#1B5E20]">📥 Unduh Template</p>
+                <p className="text-xs text-gray-500">Wajib Menggunakan Template dari kami</p>
+              </div>
+              <button
+                onClick={() => setShowTemplate(true)}
+                className="bg-[#2E7D32] hover:bg-[#1B5E20] text-white px-5 py-2.5 rounded-lg font-semibold transition shadow-md"
+              >
+                📥 Unduh Template
+              </button>
             </div>
-          </div>
-        </div>
 
-        {/* 2 KARTU MENU UTAMA */}
-        <div className="grid md:grid-cols-2 gap-6">
-          <button
-            onClick={() => openForm('Siswa')}
-            className="p-6 rounded-2xl border-2 border-[#4CAF50]/30 bg-white text-left transition-all hover:shadow-lg hover:border-[#2E7D32] hover:scale-[1.02]"
-          >
-            <div className="text-3xl mb-2">📘</div>
-            <h3 className="text-xl font-bold text-[#1B5E20]">Formulir Data Siswa</h3>
-            <p className="text-sm text-gray-600 mt-1">Klik di sini untuk mengisi dan mengunggah data penerima manfaat siswa.</p>
-            {localStorage.getItem('mbg_submitted_Siswa') === 'true' && (
-              <span className="inline-block mt-3 text-xs bg-[#E8F5E9] text-[#2E7D32] px-2 py-1 rounded-full font-semibold">✅ Sudah Diisi</span>
+            {/* BANNER PENGUMUMAN PENTING */}
+            <div className="bg-[#FFF3E0] border-2 border-[#F57C00] rounded-xl p-4 shadow-sm animate-fade-in">
+              <div className="flex items-start gap-3">
+                <span className="text-2xl">⚠️</span>
+                <div>
+                  <p className="font-bold text-[#E65100] text-sm mb-1">PENGUMUMAN UNTUK SELURUH PIC/Operator SEKOLAH!</p>
+                  <p className="text-sm text-gray-700 leading-relaxed">
+                    Sebelumnya pengumpulan data dilakukan melalui <b>Google Forms tanpa validasi</b>, sehingga banyak ditemukan file yang tidak sesuai: template yang sudah tidak digunakan masih dipakai, bahkan <b>template guru digunakan untuk data siswa</b>. Mulai sekarang, portal ini dilengkapi <b>validasi otomatis</b>. File yang tidak sesuai template kami akan <b>ditolak otomatis oleh sistem</b>.
+                  </p>
+                  <ul className="text-sm text-gray-700 mt-2 list-disc list-inside space-y-1">
+                    <li>Formulir Siswa → wajib pakai <b>Template Siswa</b>.</li>
+                    <li>Formulir Guru & Pendukung → wajib pakai <b>Template Guru & Pendukung</b>.</li>
+                    <li>Jangan menukar template antar formulir — sistem akan mendeteksi dan menolaknya.</li>
+                    <li><span className="blink-warning"> <span className="blink-icon">🚨</span> Unduh template terbaru HANYA dari portal ini, JANGAN dari file lama/kiriman chat! </span></li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            {/* 2 KARTU MENU UTAMA */}
+            <div className="grid md:grid-cols-2 gap-6">
+              <button
+                onClick={() => openForm('Siswa')}
+                className="p-6 rounded-2xl border-2 border-[#4CAF50]/30 bg-white text-left transition-all hover:shadow-lg hover:border-[#2E7D32] hover:scale-[1.02]"
+              >
+                <div className="text-3xl mb-2">📘</div>
+                <h3 className="text-xl font-bold text-[#1B5E20]">Formulir Data Siswa</h3>
+                <p className="text-sm text-gray-600 mt-1">Klik di sini untuk mengisi dan mengunggah data penerima manfaat siswa.</p>
+                {localStorage.getItem('mbg_submitted_Siswa') === 'true' && (
+                  <span className="inline-block mt-3 text-xs bg-[#E8F5E9] text-[#2E7D32] px-2 py-1 rounded-full font-semibold">✅ Sudah Diisi</span>
+                )}
+              </button>
+
+              <button
+                onClick={() => openForm('Guru')}
+                className="p-6 rounded-2xl border-2 border-[#F9A825]/30 bg-white text-left transition-all hover:shadow-lg hover:border-[#F57F17] hover:scale-[1.02]"
+              >
+                <div className="text-3xl mb-2">📕</div>
+                <h3 className="text-xl font-bold text-[#E65100]">Formulir Guru & Pendukung</h3>
+                <p className="text-sm text-gray-600 mt-1">Klik di sini untuk mengisi dan mengunggah data guru serta tenaga pendukung.</p>
+                {localStorage.getItem('mbg_submitted_Guru') === 'true' && (
+                  <span className="inline-block mt-3 text-xs bg-[#FFF8E1] text-[#F57F17] px-2 py-1 rounded-full font-semibold">✅ Sudah Diisi</span>
+                )}
+              </button>
+            </div>
+
+            {/* 2 KARTU BARU: KOTAK PENGADUAN & INFORMASI MENU */}
+            <div className="grid md:grid-cols-2 gap-6">
+              <button
+                onClick={() => navigate('/kotakpengaduan')}
+                className="p-6 rounded-2xl border-2 border-[#D32F2F]/30 bg-white text-left transition-all hover:shadow-lg hover:border-[#D32F2F] hover:scale-[1.02]"
+              >
+                <div className="text-3xl mb-2">🚨</div>
+                <h3 className="text-xl font-bold text-[#B71C1C]">KOTAK PENGADUAN</h3>
+                <p className="text-sm text-gray-600 mt-1">Sampaikan saran, pengaduan, kendala, atau masukan Anda. Tanpa login, identitas terlindungi.</p>
+                <span className="inline-block mt-3 text-xs bg-[#FFEBEE] text-[#B71C1C] px-3 py-1 rounded-full font-semibold">BUKA KOTAK PENGADUAN →</span>
+              </button>
+
+              <button
+                onClick={() => navigate('/informasimenu')}
+                className="p-6 rounded-2xl border-2 border-[#1976D2]/30 bg-white text-left transition-all hover:shadow-lg hover:border-[#1976D2] hover:scale-[1.02]"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="text-3xl mb-2">📢</div>
+                    <h3 className="text-xl font-bold text-[#0D47A1]">INFORMASI MENU</h3>
+                    <p className="text-sm text-gray-600 mt-1">Flyer menu harian terbaru dari SPPG Jatian Pakusari.</p>
+                  </div>
+                  {latestFlyer && (
+                    <img
+                      src={optimizedUrl(latestFlyer.image_url, { width: 200 })}
+                      alt="Flyer terbaru"
+                      loading="lazy"
+                      className="w-20 h-20 object-cover rounded-lg border border-gray-200 shrink-0"
+                    />
+                  )}
+                </div>
+                <span className="inline-block mt-3 text-xs bg-[#E3F2FD] text-[#0D47A1] px-3 py-1 rounded-full font-semibold">Lihat seluruh informasi →</span>
+              </button>
+            </div>
+
+            {/* NOTIFIKASI SILANG */}
+            {notif && (
+              <div className="bg-[#FFF8E1] border-l-4 border-[#F9A825] p-4 rounded-r-lg shadow-sm animate-slide-down">
+                <p className="text-sm text-[#E65100] font-medium">{notif}</p>
+              </div>
             )}
-          </button>
 
-          <button
-            onClick={() => openForm('Guru')}
-            className="p-6 rounded-2xl border-2 border-[#F9A825]/30 bg-white text-left transition-all hover:shadow-lg hover:border-[#F57F17] hover:scale-[1.02]"
-          >
-            <div className="text-3xl mb-2">📕</div>
-            <h3 className="text-xl font-bold text-[#E65100]">Formulir Guru & Pendukung</h3>
-            <p className="text-sm text-gray-600 mt-1">Klik di sini untuk mengisi dan mengunggah data guru serta tenaga pendukung.</p>
-            {localStorage.getItem('mbg_submitted_Guru') === 'true' && (
-              <span className="inline-block mt-3 text-xs bg-[#FFF8E1] text-[#F57F17] px-2 py-1 rounded-full font-semibold">✅ Sudah Diisi</span>
-            )}
-          </button>
-        </div>
-
-        {/* NOTIFIKASI SILANG */}
-        {notif && (
-          <div className="bg-[#FFF8E1] border-l-4 border-[#F9A825] p-4 rounded-r-lg shadow-sm animate-slide-down">
-            <p className="text-sm text-[#E65100] font-medium">{notif}</p>
-          </div>
+            {/* DASHBOARD */}
+            <div className="pt-4">
+              <Dashboard />
+            </div>
+          </>
         )}
 
-        {/* DASHBOARD */}
-        <div className="pt-4">
-          <Dashboard />
-        </div>
+        {/* ================= HALAMAN BARU ================= */}
+        {route === '/kotakpengaduan' && <ComplaintBox onNavigate={navigate} />}
+        {route === '/informasimenu' && <MenuInfo onNavigate={navigate} />}
+        {route === '/informasimenu/staff' && <MenuInfoStaff onNavigate={navigate} />}
 
       </main>
 
