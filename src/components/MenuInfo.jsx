@@ -41,7 +41,7 @@ export default function MenuInfo({ onNavigate }) {
           <p className="text-sm text-gray-500">Flyer menu harian dari SPPG Jatian Pakusari, terbaru lebih dulu.</p>
         </div>
         <button onClick={() => onNavigate('/informasimenu/staff')} className="text-xs bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 font-semibold px-3 py-2 rounded-lg transition">
-          🔐 Staff
+          🔐 Ahli Gizi
         </button>
       </div>
 
