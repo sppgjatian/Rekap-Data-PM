@@ -1,11 +1,10 @@
-// Konfigurasi Cloudinary — AMAN: hanya cloud name + unsigned preset di frontend
 export const CLOUDINARY_CLOUD_NAME = 'ryp8rbvj';
 export const CLOUDINARY_UPLOAD_PRESET = 'sppg_unsigned';
 
 const UPLOAD_URL = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`;
 
 export const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-export const MAX_IMAGE_BYTES = 2 * 1024 * 1024; // 2MB
+export const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
 
 export function validateImageFile(file) {
   if (!file) return { ok: false, error: 'Belum ada file dipilih.' };
@@ -13,7 +12,7 @@ export function validateImageFile(file) {
     return { ok: false, error: 'Format tidak didukung. Hanya JPG, JPEG, PNG, WEBP. Video tidak diizinkan.' };
   }
   if (file.size > MAX_IMAGE_BYTES) {
-    return { ok: false, error: `Ukuran file ${(file.size / 1024 / 1024).toFixed(1)}MB melebihi batas 2MB. Pilih foto yang lebih kecil.` };
+    return { ok: false, error: `Ukuran file ${(file.size / 1024 / 1024).toFixed(1)}MB melebihi batas 2MB.` };
   }
   return { ok: true };
 }
@@ -34,7 +33,6 @@ export async function uploadImageToCloudinary(file, folder) {
   return { url: json.secure_url, publicId: json.public_id };
 }
 
-// URL dengan transformasi Cloudinary (compress + resize otomatis)
 export function optimizedUrl(url, { width } = {}) {
   if (!url) return url;
   const marker = '/image/upload/';
