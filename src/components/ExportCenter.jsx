@@ -49,8 +49,9 @@ const safeSheet = (name, used) => {
   used[final] = true;
   return final;
 };
+
 /* ========== KONFIGURASI TEMPLATE REQUEST DISPENDIK ========== */
-const DISPENDIK_TITLE = 'SAMPEL PM SPPG JEMBER PAKUSARI KERTOSARI'; // ganti sesuai kebutuhan
+const DISPENDIK_TITLE = 'SAMPEL PM SPPG JEMBER PAKUSARI KERTOSARI';
 const NPSN_MAP = {
   'MI PONPES NURURROHMAN': '60715647', 'MTS PONPES NURURROHMAN': '20581524',
   'PONPES MIFTAHUL HASAN': '69950049', 'SDN PAKUSARI 02': '20523670',
@@ -65,27 +66,30 @@ const NPSN_MAP = {
   'SDN KERTOSARI 2': '20523600', 'HABIBURRAHMAN (2)': '69894852',
   'PONPES HABIBURRAHMAN (2)': '69745155', 'PONPES NURURROHMAN (2)': '69894851',
 };
-const ADDRESS_MAP = {}; // isi manual bila perlu: 'NAMA SEKOLAH': 'JL. ...'
+const ADDRESS_MAP = {};
 
-const JENIS_ORDER = ['SPS', 'PAUD', 'RA', 'TK', 'MIS', 'SD', 'SMP', 'MTS', 'MA', 'SMK', 'PONDOK', 'LAIN'];
+const JENIS_PREF = ['SPS', 'PAUD', 'RA', 'TK', 'MI', 'SD', 'SMP', 'MTS', 'MA', 'SMK', 'SMA', 'SLB', 'LAIN'];
 
+// Ponpes dengan jenjang dalam kurung → masuk ke jenjangnya, bukan PONDOK
 const getJenis = (name) => {
   const n = String(name).toUpperCase().trim();
+  const inParen = n.match(/\((MA|MTS|MI|RA|SMP|SD|TK|SMK|SMA|SLB)\)/);
+  if (inParen) return inParen[1];
   if (n.startsWith('SPS')) return 'SPS';
   if (n.startsWith('PAUD') || n.startsWith('KB')) return 'PAUD';
   if (n.startsWith('RA')) return 'RA';
   if (n.startsWith('TK')) return 'TK';
-  if (n.startsWith('MI')) return 'MIS';
+  if (n.startsWith('MI')) return 'MI';
   if (n.startsWith('SD')) return 'SD';
   if (n.startsWith('SMP')) return 'SMP';
   if (n.startsWith('MTS')) return 'MTS';
   if (n.startsWith('MA')) return 'MA';
   if (n.startsWith('SMK')) return 'SMK';
-  if (n.startsWith('PP') || n.startsWith('PONPES')) return 'PONDOK';
+  if (n.startsWith('SMA')) return 'SMA';
+  if (n.startsWith('SLB')) return 'SLB';
   return 'LAIN';
 };
 
-export default function ExportCenter({ onClose }) {
 export default function ExportCenter({ onClose }) {
   const [meta, setMeta] = useState([]);
   const [details, setDetails] = useState([]);
@@ -240,6 +244,98 @@ export default function ExportCenter({ onClose }) {
     setMsg(`✅ Export berhasil: ${filtered.length} baris (🥣 ${countKecil} kecil, 🍛 ${countBesar} besar).`);
   };
 
+  /* ========== EXPORT TEMPLATE REQUEST DISPENDIK ========== */
+  const exportDispendik = () => {
+    if (filtered.length === 0) { setMsg('❌ Tidak ada data untuk template Dispendik.'); return; }
+
+    const bySchool = {};
+    filtered.forEach((r) => {
+      if (!bySchool[r.sekolah]) bySchool[r.sekolah] = { kecil: 0, besar: 0, guru: 0 };
+      if (r.kategoriForm === 'Guru') bySchool[r.sekolah].guru++;
+      else if (r.porsi === 'KECIL') bySchool[r.sekolah].kecil++;
+      else bySchool[r.sekolah].besar++;
+    });
+
+    const groupsMap = {};
+    Object.keys(bySchool).forEach((s) => {
+      const j = getJenis(s);
+      (groupsMap[j] = groupsMap[j] || []).push(s);
+    });
+    const jenisList = [
+      ...JENIS_PREF.filter((j) => groupsMap[j]),
+      ...Object.keys(groupsMap).filter((j) => !JENIS_PREF.includes(j)),
+    ];
+
+    const aoa = [[DISPENDIK_TITLE], [], ['JENIS', 'NO', 'NAMA', 'ALAMAT', 'NPSN', 'SISWA/SANTRI', 'GURU', 'TOTAL']];
+    const merges = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 7 } }];
+    let rowIdx = 3;
+    let no = 1;
+    let sumSiswa = 0, sumGuru = 0;
+    const groupTotals = {};
+
+    jenisList.forEach((j) => {
+      const schools = groupsMap[j].sort();
+      const startRow = rowIdx;
+      let gTot = 0;
+      schools.forEach((s) => {
+        const d = bySchool[s];
+        const siswa = d.kecil + d.besar;
+        if (j === 'MI' || j === 'SD') {
+          aoa.push([null, null, s, ADDRESS_MAP[s] || '', NPSN_MAP[s] || '', null, null, null]);
+          rowIdx++;
+          aoa.push([null, no, 'KELAS 1-3', '', '', d.kecil, d.guru, null]);
+          rowIdx++;
+          aoa.push([null, null, 'KELAS 4-6', '', '', d.besar, 0, null]);
+          rowIdx++;
+          gTot += d.kecil + d.guru + d.besar;
+        } else {
+          aoa.push([null, no, s, ADDRESS_MAP[s] || '', NPSN_MAP[s] || '', siswa, d.guru, null]);
+          rowIdx++;
+          gTot += siswa + d.guru;
+        }
+        sumSiswa += siswa;
+        sumGuru += d.guru;
+        no++;
+      });
+      const endRow = rowIdx - 1;
+      aoa[startRow][0] = j;
+      aoa[startRow][7] = gTot;
+      groupTotals[j] = gTot;
+      if (endRow > startRow) {
+        merges.push({ s: { r: startRow, c: 0 }, e: { r: endRow, c: 0 } });
+        merges.push({ s: { r: startRow, c: 7 }, e: { r: endRow, c: 7 } });
+      }
+    });
+
+    const grand = sumSiswa + sumGuru;
+    aoa.push([null, null, 'TOTAL', null, null, sumSiswa, sumGuru, grand]);
+
+    const g = (keys) => keys.reduce((a, k) => a + (groupTotals[k] || 0), 0);
+    aoa.push([], ['RINGKAS:'], []);
+    aoa.push(['Kelompok Penerima Manfaat', 'Satuan Pendidikan/Posyandu/Lokasi', 'Jumlah']);
+    aoa.push(['PAUD/TK/RA', 'Satuan Pendidikan', g(['SPS', 'PAUD', 'RA', 'TK'])]);
+    aoa.push(['SD/MI', 'Satuan Pendidikan', g(['SD', 'MI'])]);
+    aoa.push(['SMP/MTS', 'Satuan Pendidikan', g(['SMP', 'MTS'])]);
+    aoa.push(['SMA/SMK/MA', 'Satuan Pendidikan', g(['SMA', 'SMK', 'MA'])]);
+    aoa.push(['Sekolah Luar Biasa', 'Satuan Pendidikan', g(['SLB'])]);
+    aoa.push(['Ibu Hamil', 'Posyandu', 0]);
+    aoa.push(['Ibu Menyusui', 'Posyandu', 0]);
+    aoa.push(['Balita', 'Posyandu', 0]);
+    aoa.push(['Kelompok Lain Sesuai Ketentuan', '', g(['LAIN'])]);
+    const ringkasTotalRow = aoa.length;
+    aoa.push(['Jumlah Penerima Manfaat', '', grand]);
+    merges.push({ s: { r: ringkasTotalRow, c: 0 }, e: { r: ringkasTotalRow, c: 1 } });
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws['!merges'] = merges;
+    ws['!cols'] = [{ wch: 10 }, { wch: 5 }, { wch: 38 }, { wch: 45 }, { wch: 14 }, { wch: 14 }, { wch: 8 }, { wch: 8 }];
+    XLSX.utils.book_append_sheet(wb, ws, 'SAMPEL PM');
+    const stamp = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(wb, `Template_Request_Dispendik_${stamp}.xlsx`);
+    setMsg(`✅ Template Request Dispendik berhasil diunduh (${no - 1} satuan, total ${grand} penerima).`);
+  };
+
   const filteredMeta = meta.filter((m) => {
     if (source !== 'Semua' && m.kategori_form !== source) return false;
     if (schoolScope === 'picked' && !picked.includes(m.nama_sekolah)) return false;
@@ -353,13 +449,18 @@ export default function ExportCenter({ onClose }) {
                 <p className="text-sm font-medium text-[#1B5E20]">
                   Siap diekspor: <b>{filtered.length} baris</b> · 🥣 Kecil: <b>{countKecil}</b> · 🍛 Besar: <b>{countBesar}</b>
                 </p>
-                <button onClick={doExport} className="bg-[#2E7D32] hover:bg-[#1B5E20] text-white px-6 py-3 rounded-lg font-bold transition shadow-md">
-                  📤 EXPORT EXCEL
-                </button>
+                <div className="flex flex-wrap gap-2">
+                  <button onClick={doExport} className="bg-[#2E7D32] hover:bg-[#1B5E20] text-white px-6 py-3 rounded-lg font-bold transition shadow-md">
+                    📤 EXPORT EXCEL
+                  </button>
+                  <button onClick={exportDispendik} className="bg-[#7B1FA2] hover:bg-[#4A148C] text-white px-6 py-3 rounded-lg font-bold transition shadow-md">
+                    📋 Template Request Dispendik
+                  </button>
+                </div>
               </div>
               {msg && <p className="text-sm font-medium text-[#1B5E20]">{msg}</p>}
 
-                           <div>
+              <div>
                 <p className="text-sm font-semibold text-[#1B5E20] mb-2">📦 File Asli Pengiriman (sesuai lingkup)</p>
                 <div className="max-h-40 overflow-y-auto border border-gray-200 rounded-lg divide-y divide-gray-100">
                   {filteredMeta.map((m) => (
