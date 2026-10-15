@@ -49,7 +49,43 @@ const safeSheet = (name, used) => {
   used[final] = true;
   return final;
 };
+/* ========== KONFIGURASI TEMPLATE REQUEST DISPENDIK ========== */
+const DISPENDIK_TITLE = 'SAMPEL PM SPPG JEMBER PAKUSARI KERTOSARI'; // ganti sesuai kebutuhan
+const NPSN_MAP = {
+  'MI PONPES NURURROHMAN': '60715647', 'MTS PONPES NURURROHMAN': '20581524',
+  'PONPES MIFTAHUL HASAN': '69950049', 'SDN PAKUSARI 02': '20523670',
+  'TK AL-HIKMAH': '20559350', 'TK BINA TUNAS BANGSA': '20559458',
+  'PONPES NURURROHMAN': '69745157', 'PONPES HABIBURRAHMAN': '69975761',
+  'SPS SEDAP MALAM': '69896780', 'HABIBURRAHMAN': '20581525',
+  'TK PGRI BHAKTI LESTARI': '20559672', 'SDN PAKUSARI 01': '20549705',
+  'TK AL-HAMID': '69894443', 'SDN JATIAN 03': '20549703',
+  'SDN JATIAN 01': '20524721', 'KB MUTIARA HATI': '69777459',
+  'PONPES MIFTAHUL HASAN (2)': '69882324', 'TK AL-KHOIRIYAH': '69896765',
+  'TK SUAKA ANAK NEGERI': '20559722', 'SDN KERTOSARI 3': '20523615',
+  'SDN KERTOSARI 2': '20523600', 'HABIBURRAHMAN (2)': '69894852',
+  'PONPES HABIBURRAHMAN (2)': '69745155', 'PONPES NURURROHMAN (2)': '69894851',
+};
+const ADDRESS_MAP = {}; // isi manual bila perlu: 'NAMA SEKOLAH': 'JL. ...'
 
+const JENIS_ORDER = ['SPS', 'PAUD', 'RA', 'TK', 'MIS', 'SD', 'SMP', 'MTS', 'MA', 'SMK', 'PONDOK', 'LAIN'];
+
+const getJenis = (name) => {
+  const n = String(name).toUpperCase().trim();
+  if (n.startsWith('SPS')) return 'SPS';
+  if (n.startsWith('PAUD') || n.startsWith('KB')) return 'PAUD';
+  if (n.startsWith('RA')) return 'RA';
+  if (n.startsWith('TK')) return 'TK';
+  if (n.startsWith('MI')) return 'MIS';
+  if (n.startsWith('SD')) return 'SD';
+  if (n.startsWith('SMP')) return 'SMP';
+  if (n.startsWith('MTS')) return 'MTS';
+  if (n.startsWith('MA')) return 'MA';
+  if (n.startsWith('SMK')) return 'SMK';
+  if (n.startsWith('PP') || n.startsWith('PONPES')) return 'PONDOK';
+  return 'LAIN';
+};
+
+export default function ExportCenter({ onClose }) {
 export default function ExportCenter({ onClose }) {
   const [meta, setMeta] = useState([]);
   const [details, setDetails] = useState([]);
