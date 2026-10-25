@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
-import { optimizedUrl } from '../utils/cloudinary';
+import { supabaseQr } from '../lib/supabaseQr';
 
+const BUCKET_NAME = 'assets-harian';
 const PAGE_SIZE = 9;
 
 export default function MenuInfo({ onNavigate }) {
@@ -12,15 +12,32 @@ export default function MenuInfo({ onNavigate }) {
 
   const load = async (p) => {
     setLoading(true);
-    const { data } = await supabase
-      .from('menu_info')
-      .select('id, image_url, caption, uploaded_at')
-      .order('uploaded_at', { ascending: false })
-      .range(p * PAGE_SIZE, (p + 1) * PAGE_SIZE - 1);
-    const rows = data || [];
-    setItems((prev) => (p === 0 ? rows : [...prev, ...rows]));
-    setHasMore(rows.length === PAGE_SIZE);
-    setPage(p);
+    const { data, error } = await supabaseQr.storage
+      .from(BUCKET_NAME)
+      .list('', {
+        limit: PAGE_SIZE,
+        offset: p * PAGE_SIZE,
+        sortBy: { column: 'created_at', order: 'desc' },
+      });
+
+    if (error) {
+      console.error(error);
+      setItems([]);
+    } else {
+      const realFiles = (data || []).filter(f => !f.name.startsWith('.'));
+      const rows = realFiles.map(f => {
+        const { data: urlData } = supabaseQr.storage.from(BUCKET_NAME).getPublicUrl(f.name);
+        return {
+          id: f.name,
+          image_url: urlData.publicUrl,
+          caption: f.name.replace(/^update_\d+_/, '').replace(/\.[^.]+$/, ''),
+          uploaded_at: f.created_at,
+        };
+      });
+      setItems((prev) => (p === 0 ? rows : [...prev, ...rows]));
+      setHasMore(realFiles.length === PAGE_SIZE);
+      setPage(p);
+    }
     setLoading(false);
   };
 
@@ -41,7 +58,7 @@ export default function MenuInfo({ onNavigate }) {
           <p className="text-sm text-gray-500">Flyer menu harian dari SPPG Jatian Pakusari, terbaru lebih dulu.</p>
         </div>
         <button onClick={() => onNavigate('/informasimenu/staff')} className="text-xs bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 font-semibold px-3 py-2 rounded-lg transition">
-          🔐 Ahli Gizi
+          🔐 Staff
         </button>
       </div>
 
@@ -57,7 +74,7 @@ export default function MenuInfo({ onNavigate }) {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {list.map((it) => (
                 <a key={it.id} href={it.image_url} target="_blank" rel="noreferrer" className="block bg-white rounded-2xl shadow overflow-hidden border border-gray-100 hover:shadow-lg transition">
-                  <img src={optimizedUrl(it.image_url, { width: 800 })} alt={it.caption || 'Flyer menu'} loading="lazy" className="w-full h-auto object-cover" />
+                  <img src={it.image_url} alt={it.caption || 'Flyer menu'} loading="lazy" className="w-full h-auto object-cover" />
                   {it.caption && <p className="p-3 text-xs text-gray-600">{it.caption}</p>}
                 </a>
               ))}
