@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabaseQr } from '../lib/supabaseQr';
 
 const SESSION_KEY = 'menu_staff_auth';
-const STAFF_PASSWORD = 'staffsppg2026'; // ← Ganti dengan password staff Anda
+const STAFF_PASSWORD = '2030'; // ← Ganti dengan password staff Anda
 const BUCKET_NAME = 'assets-harian';
 const QR_FUNCTION_URL = 'https://exeawjvpprhbilrvpics.supabase.co/functions/v1/router-gambar';
 
