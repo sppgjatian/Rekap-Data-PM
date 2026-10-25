@@ -59,7 +59,7 @@ export default function AdminQrHarian({ onNavigate }) {
     
     if (authMode === 'signup') {
       const { error } = await supabaseQr.auth.signUp({ email, password });
-      if (error) setAuthMessage(error.message);
+      if (error) setAuthMessage('❌ ' + error.message);
       else setAuthMessage('✅ Akun dibuat! Silakan login.');
     } else {
       const { error } = await supabaseQr.auth.signInWithPassword({ email, password });
