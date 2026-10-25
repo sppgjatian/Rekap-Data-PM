@@ -7,12 +7,11 @@ import TemplateModal from './components/TemplateModal';
 import ComplaintBox from './components/ComplaintBox';
 import MenuInfo from './components/MenuInfo';
 import MenuInfoStaff from './components/MenuInfoStaff';
-import AdminQrHarian from './components/AdminQrHarian'; /* ← BARU: Import komponen QR */
 import { supabase } from './lib/supabase';
-import { optimizedUrl } from './utils/cloudinary';
+import { supabaseQr } from './lib/supabaseQr';
 
 /* ---------- Routing sederhana tanpa react-router (aman untuk GitHub Pages) ---------- */
-const KNOWN_ROUTES = ['/', '/kotakpengaduan', '/informasimenu', '/informasimenu/staff', '/admin-qr']; /* ← BARU: Tambah route /admin-qr */
+const KNOWN_ROUTES = ['/', '/kotakpengaduan', '/informasimenu', '/informasimenu/staff'];
 
 const getRoute = () => {
   const base = import.meta.env.BASE_URL || '/';
@@ -68,16 +67,14 @@ export default function App() {
   }, []);
 
   /* Ambil 1 flyer terbaru dari Storage (QR Harian) untuk card di beranda */
-useEffect(() => {
-  if (route !== '/') { setLatestFlyer(null); return; }
-  let alive = true;
-  
-  // Import dinamis untuk supabaseQr
-  import('./lib/supabaseQr').then(({ supabaseQr }) => {
+  useEffect(() => {
+    if (route !== '/') { setLatestFlyer(null); return; }
+    let alive = true;
+
     supabaseQr.storage
       .from('assets-harian')
       .list('', {
-        limit: 1,
+        limit: 10,
         offset: 0,
         sortBy: { column: 'created_at', order: 'desc' },
       })
@@ -91,12 +88,16 @@ useEffect(() => {
             image_url: urlData.publicUrl,
             uploaded_at: realFile.created_at,
           });
+        } else {
+          setLatestFlyer(null);
         }
+      })
+      .catch((err) => {
+        console.error('Gagal memuat flyer terbaru:', err);
       });
-  });
-  
-  return () => { alive = false; };
-}, [route]);
+
+    return () => { alive = false; };
+  }, [route]);
 
   const openForm = (type) => {
     setActiveForm(type);
@@ -168,13 +169,6 @@ useEffect(() => {
             >
               🔐 Admin
             </button>
-            {/* ← BARU: Tombol Admin QR Harian */}
-            <button
-              onClick={() => navigate('/admin-qr')}
-              className="text-xs bg-[#2E7D32] hover:bg-[#1B5E20] text-white font-semibold px-3 py-2 rounded-lg transition shadow-md border border-white/30"
-            >
-              📸 Admin QR
-            </button>
           </div>
         </div>
       </header>
@@ -184,7 +178,6 @@ useEffect(() => {
         {/* ================= BERANDA ================= */}
         {route === '/' && (
           <>
-            {/* TOMBOL TUNGGAL UNDUH TEMPLATE */}
             <div className="bg-white rounded-xl p-4 shadow-sm border border-green-100 flex flex-wrap items-center justify-between gap-3 animate-fade-in">
               <div>
                 <p className="text-sm font-semibold text-[#1B5E20]">📥 Unduh Template</p>
@@ -198,7 +191,6 @@ useEffect(() => {
               </button>
             </div>
 
-            {/* BANNER PENGUMUMAN PENTING */}
             <div className="bg-[#FFF3E0] border-2 border-[#F57C00] rounded-xl p-4 shadow-sm animate-fade-in">
               <div className="flex items-start gap-3">
                 <span className="text-2xl">⚠️</span>
@@ -217,7 +209,6 @@ useEffect(() => {
               </div>
             </div>
 
-            {/* 2 KARTU MENU UTAMA */}
             <div className="grid md:grid-cols-2 gap-6">
               <button
                 onClick={() => openForm('Siswa')}
@@ -244,7 +235,6 @@ useEffect(() => {
               </button>
             </div>
 
-            {/* 2 KARTU BARU: KOTAK PENGADUAN & INFORMASI MENU */}
             <div className="grid md:grid-cols-2 gap-6">
               <button
                 onClick={() => navigate('/kotakpengaduan')}
@@ -267,38 +257,33 @@ useEffect(() => {
                     <p className="text-sm text-gray-600 mt-1">Flyer menu harian terbaru dari SPPG Jatian Pakusari.</p>
                   </div>
                   {latestFlyer && (
-  <img
-    src={latestFlyer.image_url}
-    alt="Flyer terbaru"
-    loading="lazy"
-    className="w-20 h-20 object-cover rounded-lg border border-gray-200 shrink-0"
-  />
-)}
+                    <img
+                      src={latestFlyer.image_url}
+                      alt="Flyer terbaru"
+                      loading="lazy"
+                      className="w-20 h-20 object-cover rounded-lg border border-gray-200 shrink-0"
+                    />
+                  )}
                 </div>
                 <span className="inline-block mt-3 text-xs bg-[#E3F2FD] text-[#0D47A1] px-3 py-1 rounded-full font-semibold">Lihat seluruh informasi →</span>
               </button>
             </div>
 
-            {/* NOTIFIKASI SILANG */}
             {notif && (
               <div className="bg-[#FFF8E1] border-l-4 border-[#F9A825] p-4 rounded-r-lg shadow-sm animate-slide-down">
                 <p className="text-sm text-[#E65100] font-medium">{notif}</p>
               </div>
             )}
 
-            {/* DASHBOARD */}
             <div className="pt-4">
               <Dashboard />
             </div>
           </>
         )}
 
-        {/* ================= HALAMAN BARU ================= */}
         {route === '/kotakpengaduan' && <ComplaintBox onNavigate={navigate} />}
         {route === '/informasimenu' && <MenuInfo onNavigate={navigate} />}
         {route === '/informasimenu/staff' && <MenuInfoStaff onNavigate={navigate} />}
-        {/* ← BARU: Route untuk Admin QR Harian */}
-        {route === '/admin-qr' && <AdminQrHarian onNavigate={navigate} />}
 
       </main>
 
@@ -306,7 +291,6 @@ useEffect(() => {
         © {new Date().getFullYear()} SPPG Jatian Pakusari · portalspggjatian.my.id · Badan Gizi Nasional
       </footer>
 
-      {/* OVERLAY FORMULIR */}
       {activeForm && (
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 backdrop-blur-sm animate-fade-in">
           <div className="relative w-full max-w-4xl mx-4 my-8 bg-white rounded-2xl shadow-2xl animate-slide-up">
@@ -327,12 +311,10 @@ useEffect(() => {
         </div>
       )}
 
-      {/* OVERLAY ADMIN */}
       {showAdmin && (
         <AdminPanel onClose={() => setShowAdmin(false)} />
       )}
 
-      {/* OVERLAY UNDUH TEMPLATE */}
       {showTemplate && (
         <TemplateModal onClose={() => setShowTemplate(false)} />
       )}
