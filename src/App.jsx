@@ -7,11 +7,12 @@ import TemplateModal from './components/TemplateModal';
 import ComplaintBox from './components/ComplaintBox';
 import MenuInfo from './components/MenuInfo';
 import MenuInfoStaff from './components/MenuInfoStaff';
+import AdminQrHarian from './components/AdminQrHarian'; /* ← BARU: Import komponen QR */
 import { supabase } from './lib/supabase';
 import { optimizedUrl } from './utils/cloudinary';
 
 /* ---------- Routing sederhana tanpa react-router (aman untuk GitHub Pages) ---------- */
-const KNOWN_ROUTES = ['/', '/kotakpengaduan', '/informasimenu', '/informasimenu/staff'];
+const KNOWN_ROUTES = ['/', '/kotakpengaduan', '/informasimenu', '/informasimenu/staff', '/admin-qr']; /* ← BARU: Tambah route /admin-qr */
 
 const getRoute = () => {
   const base = import.meta.env.BASE_URL || '/';
@@ -150,6 +151,13 @@ export default function App() {
             >
               🔐 Admin
             </button>
+            {/* ← BARU: Tombol Admin QR Harian */}
+            <button
+              onClick={() => navigate('/admin-qr')}
+              className="text-xs bg-[#2E7D32] hover:bg-[#1B5E20] text-white font-semibold px-3 py-2 rounded-lg transition shadow-md border border-white/30"
+            >
+              📸 Admin QR
+            </button>
           </div>
         </div>
       </header>
@@ -272,6 +280,8 @@ export default function App() {
         {route === '/kotakpengaduan' && <ComplaintBox onNavigate={navigate} />}
         {route === '/informasimenu' && <MenuInfo onNavigate={navigate} />}
         {route === '/informasimenu/staff' && <MenuInfoStaff onNavigate={navigate} />}
+        {/* ← BARU: Route untuk Admin QR Harian */}
+        {route === '/admin-qr' && <AdminQrHarian onNavigate={navigate} />}
 
       </main>
 
