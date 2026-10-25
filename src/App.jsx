@@ -67,19 +67,36 @@ export default function App() {
     document.head.appendChild(link);
   }, []);
 
-  /* Ambil 1 flyer terbaru saja untuk card di beranda (hemat bandwidth) */
-  useEffect(() => {
-    if (route !== '/') { setLatestFlyer(null); return; }
-    let alive = true;
-    supabase
-      .from('menu_info')
-      .select('id, image_url, uploaded_at')
-      .order('uploaded_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-      .then(({ data }) => { if (alive) setLatestFlyer(data); });
-    return () => { alive = false; };
-  }, [route]);
+  /* Ambil 1 flyer terbaru dari Storage (QR Harian) untuk card di beranda */
+useEffect(() => {
+  if (route !== '/') { setLatestFlyer(null); return; }
+  let alive = true;
+  
+  // Import dinamis untuk supabaseQr
+  import('./lib/supabaseQr').then(({ supabaseQr }) => {
+    supabaseQr.storage
+      .from('assets-harian')
+      .list('', {
+        limit: 1,
+        offset: 0,
+        sortBy: { column: 'created_at', order: 'desc' },
+      })
+      .then(({ data }) => {
+        if (!alive || !data) return;
+        const realFile = data.find(f => !f.name.startsWith('.'));
+        if (realFile) {
+          const { data: urlData } = supabaseQr.storage.from('assets-harian').getPublicUrl(realFile.name);
+          setLatestFlyer({
+            id: realFile.name,
+            image_url: urlData.publicUrl,
+            uploaded_at: realFile.created_at,
+          });
+        }
+      });
+  });
+  
+  return () => { alive = false; };
+}, [route]);
 
   const openForm = (type) => {
     setActiveForm(type);
@@ -250,13 +267,13 @@ export default function App() {
                     <p className="text-sm text-gray-600 mt-1">Flyer menu harian terbaru dari SPPG Jatian Pakusari.</p>
                   </div>
                   {latestFlyer && (
-                    <img
-                      src={optimizedUrl(latestFlyer.image_url, { width: 200 })}
-                      alt="Flyer terbaru"
-                      loading="lazy"
-                      className="w-20 h-20 object-cover rounded-lg border border-gray-200 shrink-0"
-                    />
-                  )}
+  <img
+    src={latestFlyer.image_url}
+    alt="Flyer terbaru"
+    loading="lazy"
+    className="w-20 h-20 object-cover rounded-lg border border-gray-200 shrink-0"
+  />
+)}
                 </div>
                 <span className="inline-block mt-3 text-xs bg-[#E3F2FD] text-[#0D47A1] px-3 py-1 rounded-full font-semibold">Lihat seluruh informasi →</span>
               </button>
