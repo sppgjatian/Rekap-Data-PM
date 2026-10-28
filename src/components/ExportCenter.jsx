@@ -335,6 +335,54 @@ export default function ExportCenter({ onClose }) {
     XLSX.writeFile(wb, `Template_Request_Dispendik_${stamp}.xlsx`);
     setMsg(`✅ Template Request Dispendik berhasil diunduh (${no - 1} satuan, total ${grand} penerima).`);
   };
+  /* ========== REKAP JUMLAH P/L PER KELAS ========== */
+  const rekapGenderAoa = () => {
+    const bySchoolClass = {};
+    filtered.forEach((r) => {
+      const kelas = r.kelasLabel || '-';
+      const key = `${r.sekolah}||${r.jenjang}||${kelas}`;
+      if (!bySchoolClass[key]) bySchoolClass[key] = { sekolah: r.sekolah, jenjang: r.jenjang, kelas, p: 0, l: 0 };
+      const g = String(r.gender).toUpperCase();
+      if (g === 'P') bySchoolClass[key].p++;
+      else if (g === 'L') bySchoolClass[key].l++;
+    });
+    const list = Object.values(bySchoolClass);
+    list.sort((a, b) =>
+      a.sekolah.localeCompare(b.sekolah, 'id') ||
+      a.kelas.localeCompare(b.kelas, 'id', { numeric: true })
+    );
+    const aoa = [
+      ['REKAP JUMLAH P & L PER KELAS - SPPG JATIAN PAKUSARI'],
+      [],
+      ['Nama Sekolah', 'Jenjang', 'Kelas / Sub', 'Jumlah P', 'Jumlah L', 'Total'],
+    ];
+    let lastSchool = null;
+    let sp = 0, sl = 0, TP = 0, TL = 0;
+    list.forEach((x) => {
+      if (lastSchool && x.sekolah !== lastSchool) {
+        aoa.push([`Subtotal ${lastSchool}`, '', '', sp, sl, sp + sl]);
+        sp = 0; sl = 0;
+      }
+      lastSchool = x.sekolah;
+      aoa.push([x.sekolah, x.jenjang, x.kelas, x.p, x.l, x.p + x.l]);
+      sp += x.p; sl += x.l; TP += x.p; TL += x.l;
+    });
+    if (lastSchool) aoa.push([`Subtotal ${lastSchool}`, '', '', sp, sl, sp + sl]);
+    aoa.push(['TOTAL KESELURUHAN', '', '', TP, TL, TP + TL]);
+    return aoa;
+  };
+
+  const exportGenderPerKelas = () => {
+    if (filtered.length === 0) { setMsg('❌ Tidak ada data untuk rekap P/L.'); return; }
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(rekapGenderAoa());
+    ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 5 } }];
+    ws['!cols'] = [{ wch: 38 }, { wch: 10 }, { wch: 18 }, { wch: 10 }, { wch: 10 }, { wch: 8 }];
+    XLSX.utils.book_append_sheet(wb, ws, 'REKAP P-L PER KELAS');
+    const stamp = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(wb, `Rekap_PL_per_Kelas_${stamp}.xlsx`);
+    setMsg(`✅ Rekap P/L per kelas berhasil diunduh.`);
+  };
 
   const filteredMeta = meta.filter((m) => {
     if (source !== 'Semua' && m.kategori_form !== source) return false;
@@ -455,6 +503,9 @@ export default function ExportCenter({ onClose }) {
                   </button>
                   <button onClick={exportDispendik} className="bg-[#7B1FA2] hover:bg-[#4A148C] text-white px-6 py-3 rounded-lg font-bold transition shadow-md">
                     📋 Template Request Dispendik
+                  </button>
+                                    <button onClick={exportGenderPerKelas} className="bg-[#0288D1] hover:bg-[#01579B] text-white px-6 py-3 rounded-lg font-bold transition shadow-md">
+                    👥 Rekap P/L per Kelas
                   </button>
                 </div>
               </div>
