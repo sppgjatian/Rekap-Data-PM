@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import * as XLSX from 'xlsx';
+import XLSXStyle from 'xlsx-js-style';
 import { supabase } from '../lib/supabase';
 import { derivePorsi, deriveJenjang } from '../utils/porsi';
 
@@ -335,53 +336,86 @@ export default function ExportCenter({ onClose }) {
     XLSX.writeFile(wb, `Template_Request_Dispendik_${stamp}.xlsx`);
     setMsg(`✅ Template Request Dispendik berhasil diunduh (${no - 1} satuan, total ${grand} penerima).`);
   };
-  /* ========== REKAP JUMLAH P/L PER KELAS ========== */
-  const rekapGenderAoa = () => {
-    const bySchoolClass = {};
-    filtered.forEach((r) => {
-      const kelas = r.kelasLabel || '-';
-      const key = `${r.sekolah}||${r.jenjang}||${kelas}`;
-      if (!bySchoolClass[key]) bySchoolClass[key] = { sekolah: r.sekolah, jenjang: r.jenjang, kelas, p: 0, l: 0 };
-      const g = String(r.gender).toUpperCase();
-      if (g === 'P') bySchoolClass[key].p++;
-      else if (g === 'L') bySchoolClass[key].l++;
-    });
-    const list = Object.values(bySchoolClass);
-    list.sort((a, b) =>
-      a.sekolah.localeCompare(b.sekolah, 'id') ||
-      a.kelas.localeCompare(b.kelas, 'id', { numeric: true })
-    );
-    const aoa = [
-      ['REKAP JUMLAH P & L PER KELAS - SPPG JATIAN PAKUSARI'],
-      [],
-      ['Nama Sekolah', 'Jenjang', 'Kelas / Sub', 'Jumlah P', 'Jumlah L', 'Total'],
-    ];
-    let lastSchool = null;
-    let sp = 0, sl = 0, TP = 0, TL = 0;
-    list.forEach((x) => {
-      if (lastSchool && x.sekolah !== lastSchool) {
-        aoa.push([`Subtotal ${lastSchool}`, '', '', sp, sl, sp + sl]);
-        sp = 0; sl = 0;
-      }
-      lastSchool = x.sekolah;
-      aoa.push([x.sekolah, x.jenjang, x.kelas, x.p, x.l, x.p + x.l]);
-      sp += x.p; sl += x.l; TP += x.p; TL += x.l;
-    });
-    if (lastSchool) aoa.push([`Subtotal ${lastSchool}`, '', '', sp, sl, sp + sl]);
-    aoa.push(['TOTAL KESELURUHAN', '', '', TP, TL, TP + TL]);
-    return aoa;
-  };
-
+  /* ========== REKAP JUMLAH P/L PER KELAS (BERGAYA) ========== */
   const exportGenderPerKelas = () => {
     if (filtered.length === 0) { setMsg('❌ Tidak ada data untuk rekap P/L.'); return; }
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.aoa_to_sheet(rekapGenderAoa());
+
+    const bySchool = {};
+    filtered.forEach((r) => {
+      const kelas = r.kelasLabel || '-';
+      if (!bySchool[r.sekolah]) bySchool[r.sekolah] = {};
+      if (!bySchool[r.sekolah][kelas]) bySchool[r.sekolah][kelas] = { jenjang: r.jenjang, p: 0, l: 0 };
+      const g = String(r.gender).toUpperCase();
+      if (g === 'P') bySchool[r.sekolah][kelas].p++;
+      else if (g === 'L') bySchool[r.sekolah][kelas].l++;
+    });
+
+    const BORDER = {
+      top: { style: 'thin', color: { rgb: 'BFBFBF' } },
+      bottom: { style: 'thin', color: { rgb: 'BFBFBF' } },
+      left: { style: 'thin', color: { rgb: 'BFBFBF' } },
+      right: { style: 'thin', color: { rgb: 'BFBFBF' } },
+    };
+    const S_TITLE = { font: { bold: true, sz: 14, color: { rgb: '1B5E20' } }, alignment: { horizontal: 'center', vertical: 'center' } };
+    const S_HEADER = { font: { bold: true, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: 'C00000' } }, alignment: { horizontal: 'center', vertical: 'center', wrapText: true }, border: BORDER };
+    const S_DATA = { alignment: { vertical: 'center' }, border: BORDER };
+    const S_DATA_C = { alignment: { horizontal: 'center', vertical: 'center' }, border: BORDER };
+    const S_SUB = { font: { bold: true, color: { rgb: '9C0006' } }, fill: { fgColor: { rgb: 'FFC7CE' } }, alignment: { vertical: 'center' }, border: BORDER };
+    const S_SUB_C = { font: { bold: true, color: { rgb: '9C0006' } }, fill: { fgColor: { rgb: 'FFC7CE' } }, alignment: { horizontal: 'center', vertical: 'center' }, border: BORDER };
+    const S_GRAND = { font: { bold: true, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: 'C00000' } }, alignment: { vertical: 'center' }, border: BORDER };
+    const S_GRAND_C = { font: { bold: true, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: 'C00000' } }, alignment: { horizontal: 'center', vertical: 'center' }, border: BORDER };
+
+    const aoa = [];
+    const types = [];
+    const push = (cells, type) => { aoa.push(cells); types.push(type); };
+
+    push(['REKAP JUMLAH SISWA P & L PER KELAS - SPPG JATIAN PAKUSARI'], 'title');
+    push([], 'blank');
+    push(['Nama Sekolah', 'Jenjang', 'Kelas / Sub', 'Jumlah P', 'Jumlah L', 'Total'], 'header');
+
+    let TP = 0, TL = 0;
+    Object.keys(bySchool).sort((a, b) => a.localeCompare(b, 'id')).forEach((school) => {
+      const classes = bySchool[school];
+      const classKeys = Object.keys(classes).sort((a, b) => a.localeCompare(b, 'id', { numeric: true }));
+      let sp = 0, sl = 0;
+      classKeys.forEach((k) => {
+        const x = classes[k];
+        push([school, x.jenjang, k, x.p, x.l, x.p + x.l], 'data');
+        sp += x.p; sl += x.l;
+      });
+      push([`Subtotal ${school}`, '', '', sp, sl, sp + sl], 'sub');
+      TP += sp; TL += sl;
+      push([], 'blank'); // jarak pemisah antar sekolah
+    });
+    push(['TOTAL KESELURUHAN', '', '', TP, TL, TP + TL], 'grand');
+
+    const wb = XLSXStyle.utils.book_new();
+    const ws = XLSXStyle.utils.aoa_to_sheet(aoa);
     ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 5 } }];
-    ws['!cols'] = [{ wch: 38 }, { wch: 10 }, { wch: 18 }, { wch: 10 }, { wch: 10 }, { wch: 8 }];
-    XLSX.utils.book_append_sheet(wb, ws, 'REKAP P-L PER KELAS');
+    ws['!cols'] = [{ wch: 34 }, { wch: 10 }, { wch: 20 }, { wch: 10 }, { wch: 10 }, { wch: 8 }];
+    ws['!rows'] = types.map((t) => (t === 'title' ? { hpt: 26 } : t === 'header' ? { hpt: 22 } : t === 'blank' ? { hpt: 8 } : { hpt: 18 }));
+
+    const styleFor = (type, c) => {
+      if (type === 'title') return S_TITLE;
+      if (type === 'header') return S_HEADER;
+      if (type === 'sub') return c >= 3 ? S_SUB_C : S_SUB;
+      if (type === 'grand') return c >= 3 ? S_GRAND_C : S_GRAND;
+      if (type === 'data') return c >= 3 ? S_DATA_C : S_DATA;
+      return null;
+    };
+    types.forEach((type, r) => {
+      if (type === 'blank') return;
+      for (let c = 0; c < 6; c++) {
+        const addr = XLSXStyle.utils.encode_cell({ r, c });
+        if (!ws[addr]) ws[addr] = { t: 's', v: '' };
+        ws[addr].s = styleFor(type, c);
+      }
+    });
+
+    XLSXStyle.utils.book_append_sheet(wb, ws, 'REKAP P-L PER KELAS');
     const stamp = new Date().toISOString().slice(0, 10);
-    XLSX.writeFile(wb, `Rekap_PL_per_Kelas_${stamp}.xlsx`);
-    setMsg(`✅ Rekap P/L per kelas berhasil diunduh.`);
+    XLSXStyle.writeFile(wb, `Rekap_PL_per_Kelas_${stamp}.xlsx`);
+    setMsg('✅ Rekap P/L per kelas (bergaya) berhasil diunduh.');
   };
 
   const filteredMeta = meta.filter((m) => {
